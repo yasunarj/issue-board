@@ -5,10 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "メールアドレスを入力してください")
-    .email("メール形式が正しくありません"),
+  email: z.email("メール形式が正しくありません"),
   password: z.string().min(6, "パスワードは6文字以上です"),
 });
 
