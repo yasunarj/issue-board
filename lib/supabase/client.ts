@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error("NEXT_PUBLIC_SUPABSE_URLが設定されていません");
+  throw new Error("NEXT_PUBLIC_SUPABASE_URLが設定されていません");
 }
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
