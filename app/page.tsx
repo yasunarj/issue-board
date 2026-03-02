@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 
@@ -23,33 +23,44 @@ const Home = () => {
     role: Profile["role"];
   } | null>(null);
 
+  const init = useCallback(async () => {
+    const { data: userRes } = await supabase.auth.getUser();
+    const user = userRes.user;
+    if (!user) {
+      setMe(null);
+      return null;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role =
+      profile?.role === "admin" ||
+      profile?.role === "member" ||
+      profile?.role === "viewer"
+        ? profile.role
+        : "member";
+
+    setMe({
+      id: user.id,
+      email: user.email ?? null,
+      role,
+    });
+
+    return role;
+  }, []);
+
   useEffect(() => {
-    const init = async () => {
-      const { data: userRes } = await supabase.auth.getUser();
-      const user = userRes.user;
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      setMe({
-        id: user.id,
-        email: user.email ?? null,
-        role: profile?.role ?? "member",
-      });
-    };
-
     init();
-
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       init();
     });
 
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [init]);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -77,26 +88,8 @@ const Home = () => {
         return;
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setMessage("ログインユーザーが取得できません");
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError) {
-        setMessage(`profile取得失敗: ${profileError.message}`);
-        return;
-      }
-
-      setMessage(`ログイン成功 (role: ${profile.role})`);
+      const role = await init();
+      setMessage(role ? `ログイン成功 (role: ${role})` : "ログイン成功");
     } finally {
       setIsLoading(false);
     }
@@ -118,8 +111,7 @@ const Home = () => {
       <div className="flex flex-col gap-4 w-80">
         <h1>Issue Board</h1>
         <input
-          type="text
-      "
+          type="email"
           className="border p-2"
           placeholder="email"
           value={email}
