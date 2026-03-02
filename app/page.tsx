@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 
@@ -9,12 +9,47 @@ const loginSchema = z.object({
   password: z.string().min(6, "パスワードは6文字以上です"),
 });
 
+type Profile = { role: "admin" | "member" | "viewer" };
+
 const Home = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [me, setMe] = useState<{
+    id: string;
+    email: string | null;
+    role: Profile["role"];
+  } | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const user = userRes.user;
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      setMe({
+        id: user.id,
+        email: user.email ?? null,
+        role: profile?.role ?? "member",
+      });
+    };
+
+    init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      init();
+    });
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -32,7 +67,7 @@ const Home = () => {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -42,9 +77,39 @@ const Home = () => {
         return;
       }
 
-      setMessage("ログイン成功");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setMessage("ログインユーザーが取得できません");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        setMessage(`profile取得失敗: ${profileError.message}`);
+        return;
+      }
+
+      setMessage(`ログイン成功 (role: ${profile.role})`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setMe(null);
+      setMessage("ログアウトしました");
+    } catch (e) {
+      console.error(e);
+      setMessage("ログアウトできませんでした");
     }
   };
 
@@ -76,12 +141,21 @@ const Home = () => {
             {showPassword ? "非表示" : "表示"}
           </button>
         </div>
-        <button
-          className="bg-black text-white p-2 border"
-          onClick={handleLogin}
-        >
-          {isLoading ? "ログイン中" : "ログイン"}
-        </button>
+        {me ? (
+          <button
+            className="bg-black text-white p-2 border"
+            onClick={handleLogout}
+          >
+            ログアウト
+          </button>
+        ) : (
+          <button
+            className="bg-black text-white p-2 border"
+            onClick={handleLogin}
+          >
+            {isLoading ? "ログイン中" : "ログイン"}
+          </button>
+        )}
 
         <p>{message}</p>
       </div>
