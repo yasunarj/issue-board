@@ -24,33 +24,32 @@ const Home = () => {
   } | null>(null);
 
   const init = useCallback(async () => {
-    const { data: userRes } = await supabase.auth.getUser();
-    const user = userRes.user;
-    if (!user) {
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+
+    if (!token) {
       setMe(null);
       return null;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    const role =
-      profile?.role === "admin" ||
-      profile?.role === "member" ||
-      profile?.role === "viewer"
-        ? profile.role
-        : "member";
-
-    setMe({
-      id: user.id,
-      email: user.email ?? null,
-      role,
+    const res = await fetch("http://localhost:8787/me", {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    return role;
+    if (!res.ok) {
+      setMe(null);
+      return null;
+    }
+
+    const data = await res.json();
+
+    setMe({
+      id: data.userId,
+      email: data.email,
+      role: data.role,
+    });
+
+    return data.role;
   }, []);
 
   useEffect(() => {
