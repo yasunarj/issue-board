@@ -25,30 +25,33 @@ const Home = () => {
 
   const init = useCallback(async () => {
     const { data: session } = await supabase.auth.getSession();
+  
     const token = session.session?.access_token;
-
+    console.log("tokenの確認", token);
     if (!token) {
       setMe(null);
       return null;
     }
-
+  
     const res = await fetch("http://localhost:8787/me", {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
-
+  
     if (!res.ok) {
       setMe(null);
       return null;
     }
-
+  
     const data = await res.json();
-
+  
     setMe({
       id: data.userId,
       email: data.email,
       role: data.role,
     });
-
+  
     return data.role;
   }, []);
 

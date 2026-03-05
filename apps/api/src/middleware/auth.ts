@@ -2,8 +2,9 @@ import { supabaseAdmin } from "../lib/supabase";
 import { Context, Next } from "hono";
 
 export const authMiddleware = async (c: Context, next: Next) => {
-  const authHeader = c.req.header("Authorization");
-  console.log(authHeader);
+  if (c.req.method === "OPTIONS") return await next();
+
+  const authHeader = c.req.header("Authorization") as string | undefined;
   if(!authHeader) {
     return c.json({ error: "Missing Authorization header" }, 401);
   }
