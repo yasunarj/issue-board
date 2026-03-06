@@ -27,7 +27,6 @@ const Home = () => {
     const { data: session } = await supabase.auth.getSession();
   
     const token = session.session?.access_token;
-    console.log("tokenの確認", token);
     if (!token) {
       setMe(null);
       return null;
