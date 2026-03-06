@@ -20,7 +20,14 @@ export const authMiddleware = async (c: Context, next: Next) => {
     return c.json({ error: "Invalid token" }, 401);
   }
 
+  const { data: profile } = await supabaseAdmin
+  .from("profile")
+  .select("role")
+  .eq("id", user.id)
+  .single();
+
   c.set("user", user);
+  c.set("role", profile?.role ?? "member");
 
   await next();
 }
