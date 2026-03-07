@@ -14,9 +14,8 @@ me.use("*", authMiddleware);
 
 me.get("/", async (c) => {
   const user = c.get("user");
-
   const { data: profile, error } = await supabaseAdmin
-    .from("profile")
+    .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();

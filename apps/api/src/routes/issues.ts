@@ -10,10 +10,8 @@ const issues = new Hono<AppEnv>();
 const createIssueSchema = z.object({
   title: z.string().min(1, "title is required").max(100, "title too long"),
   description: z.string().min(1, "description is required").max(2000, "description too long"),
-  dueDate: z.coerce.string().optional().or(z.literal("")),
+  dueDate: z.iso.date().optional().transform((v) => (v === "" ? undefined : v)),
 });
-
-// dueDateの部分がよくわからない。stringの後にdateが入っている。dataは非推奨であり書き換えが必要、orの部分もよくわからない
 
 issues.use("*", authMiddleware);
 
@@ -51,7 +49,6 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
     },
     201
   )
-  // dataを返しているようだが、selectに指定がないので何も返ってこないのではないか？なぜissue: dataを返しているのか？
 });
 
 export default issues;

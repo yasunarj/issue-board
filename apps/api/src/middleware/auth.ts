@@ -5,7 +5,6 @@ import type { AppEnv, Role } from "..";
 
 export const authMiddleware: MiddlewareHandler<AppEnv> = async (c: Context, next: Next) => {
   if (c.req.method === "OPTIONS") return await next();
-
   const authHeader = c.req.header("Authorization") as string | undefined;
   if (!authHeader) {
     return c.json({ error: "Missing Authorization header" }, 401);
@@ -23,13 +22,14 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c: Context, next
   }
 
   const { data: profile, error: profileError } = await supabaseAdmin
-    .from("profile")
+    .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
 
   if (profileError) {
-    return c.json({ error: "Failed to fetch role" }, 500);
+    console.error("profileError", profileError);
+    return c.json({ error: "Failed to fetch role", details: profileError }, 500);
   }
 
   const role: Role = profile?.role === "member" || profile?.role === "admin" || profile?.role === "viewer" ? profile.role : "member";

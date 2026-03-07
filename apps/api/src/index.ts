@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { User } from "@supabase/supabase-js";
 import me from "./routes/me";
+import issues from "./routes/issues";
 
 export type Role = "member" | "admin" | "viewer";
 
@@ -24,6 +25,8 @@ app.use("*", cors({
 app.get("/health", (c) => c.json({ ok: true }));
 
 app.route("/me", me);
+app.route("/issues", issues);
+
 
 const port = Number(process.env.PORT ?? 8787);
 console.log(`API listening on http://localhost:${port}`);
