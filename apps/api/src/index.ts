@@ -4,11 +4,16 @@ import { serve } from "@hono/node-server";
 import { User } from "@supabase/supabase-js";
 import me from "./routes/me";
 
-type Variables = {
-  user: User;
-}
+export type Role = "member" | "admin" | "viewer";
 
-const app = new Hono<{ Variables: Variables }>();
+export type AppEnv = {
+  Variables: {
+    user: User;
+    role: Role;
+  }
+};
+
+const app = new Hono<AppEnv>();
 
 app.use("*", cors({
   origin: "http://localhost:3000",
