@@ -14,10 +14,8 @@ const createIssueSchema = z.object({
 });
 
 issues.use("*", authMiddleware);
-
 issues.post("/", requireRole(["member", "admin"]), async (c) => {
   const body = await c.req.json();
-
   const result = createIssueSchema.safeParse(body);
 
   if (!result.success) {

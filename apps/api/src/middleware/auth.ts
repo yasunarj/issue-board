@@ -9,7 +9,6 @@ export const authMiddleware: MiddlewareHandler<AppEnv> = async (c: Context, next
   if (!authHeader) {
     return c.json({ error: "Missing Authorization header" }, 401);
   }
-
   const token = authHeader.replace("Bearer ", "");
 
   const {
