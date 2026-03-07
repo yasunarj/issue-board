@@ -14,6 +14,31 @@ const createIssueSchema = z.object({
 });
 
 issues.use("*", authMiddleware);
+
+issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
+  const { data, error } = await supabaseAdmin
+    .from("issues")
+    .select(`
+    id,
+    title,
+    description,
+    status,
+    due_date,
+    resolved_at,
+    create_at,
+    updated_at,
+    created_by,
+    resolved_by
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ issues: data });
+})
+
 issues.post("/", requireRole(["member", "admin"]), async (c) => {
   const body = await c.req.json();
   const result = createIssueSchema.safeParse(body);
