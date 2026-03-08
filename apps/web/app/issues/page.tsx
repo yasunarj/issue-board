@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 type Issue = {
   id: string;
   title: string;
   description: string;
-  status: "open" | "resolve";
+  status: "open" | "resolved";
   due_date: string | null;
   resolved_at: string | null;
   created_at: string;
@@ -19,36 +19,39 @@ type Issue = {
 const IssuesPage = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [message, setMessage] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [dueDate, setDueDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchIssue = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+  const fetchIssues = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
 
-      if (!token) {
-        setMessage("ログインしてください");
-        return;
-      }
+    if (!token) {
+      setMessage("ログインしてください");
+      return;
+    }
 
-      const res = await fetch("http://localhost:8787/issues", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const res = await fetch("http://localhost:8787/issues", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-
-      if (!res.ok) {
-        setMessage(data.error ?? "取得に失敗しました");
-        return;
-      }
-
-      setIssues(data.issues);
+    if (!res.ok) {
+      setMessage(data.error ?? "取得に失敗しました");
     };
 
-    fetchIssue();
+    setIssues(data.issues);
   }, []);
+
+  useEffect(() => {
+    fetchIssues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchIssues]);
 
   return (
     <main className="min-h-screen p-6">
@@ -76,7 +79,9 @@ const IssuesPage = () => {
                   <span>作成者ID: {issue.created_by}</span>
                   <span>解決者ID: {issue.resolved_by}</span>
                   <span>期限: {issue.due_date ?? "-"}</span>
-                  <span>作成日: {new Date(issue.created_at).toLocaleString("ja-jp")}</span>
+                  <span>
+                    作成日: {new Date(issue.created_at).toLocaleString("ja-jp")}
+                  </span>
                 </div>
               </div>
             ))
