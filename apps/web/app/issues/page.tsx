@@ -18,7 +18,10 @@ type Issue = {
 
 const IssuesPage = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [message, setMessage] = useState<string>("");
+  const [message, setMessage] = useState<{
+    text: string;
+    type: "error" | "success";
+  } | null>(null);
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [dueDate, setDueDate] = useState("");
@@ -29,7 +32,7 @@ const IssuesPage = () => {
     const token = sessionData.session?.access_token;
 
     if (!token) {
-      setMessage("ログインしてください");
+      setMessage({ text: "ログインしてください", type: "success" });
       return;
     }
 
@@ -42,8 +45,8 @@ const IssuesPage = () => {
     const data = await res.json();
 
     if (!res.ok) {
-      setMessage(data.error ?? "取得に失敗しました");
-    };
+      setMessage({ text: data.error ?? "取得に失敗しました", type: "error" });
+    }
 
     setIssues(data.issues);
   }, []);
@@ -53,10 +56,102 @@ const IssuesPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchIssues]);
 
+  const formReset = () => {
+    setTitle("");
+    setDescription("");
+    setDueDate("");
+  };
+
+  const handleCreateIssue = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        setMessage({ text: "ログインしてください", type: "error" });
+        return;
+      }
+
+      const res = await fetch("http://localhost:8787/issues", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          dueDate,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "issueの作成に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      formReset();
+      setMessage({ text: "issueを作成しました", type: "success" });
+
+      fetchIssues();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-2xl font-bold mb-6">Issue Board</h1>
+
+        {message && (
+          <p
+            className={`mb-4 ${message.type === "error" ? "text-red-600" : "text-green-600"}`}
+          >
+            {message.text}
+          </p>
+        )}
+
+        <div className="border rounded p-4 mb-6 flex flex-col gap-3">
+          <h2 className="text-lg font-bold">Issue作成</h2>
+
+          <input
+            className="border rounded p-2"
+            placeholder="タイトル"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+
+          <textarea
+            className="border rounded p-2 min-h-32"
+            placeholder="詳細"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+
+          <input
+            type="date"
+            className="border rounded p-2"
+            placeholder="詳細"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+
+          <button
+            className="bg-black border text-white rounded p-2 disabled:opacity-50"
+            onClick={handleCreateIssue}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "作成中..." : "Issueを追加"}
+          </button>
+        </div>
 
         <div className="flex flex-col gap-4">
           {issues.length === 0 ? (
@@ -87,8 +182,6 @@ const IssuesPage = () => {
             ))
           )}
         </div>
-
-        {message && <p className="mb-4 text-red-600">{message}</p>}
       </div>
     </main>
   );
