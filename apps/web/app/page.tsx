@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 
@@ -12,6 +13,7 @@ const loginSchema = z.object({
 type Profile = { role: "admin" | "member" | "viewer" };
 
 const Home = () => {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -91,6 +93,7 @@ const Home = () => {
 
       const role = await init();
       setMessage(role ? `ログイン成功 (role: ${role})` : "ログイン成功");
+      router.push("/issues");
     } finally {
       setIsLoading(false);
     }

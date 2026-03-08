@@ -25,7 +25,7 @@ issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
     status,
     due_date,
     resolved_at,
-    create_at,
+    created_at,
     updated_at,
     created_by,
     resolved_by
@@ -36,7 +36,7 @@ issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ issues: data });
+  return c.json({ ok: true, issues: data });
 })
 
 issues.post("/", requireRole(["member", "admin"]), async (c) => {
