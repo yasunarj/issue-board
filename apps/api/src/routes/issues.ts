@@ -82,4 +82,27 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
   )
 });
 
+issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
+  const id = c.req.param("id");
+  const user = c.get("user");
+
+  const { data, error } = await supabaseAdmin
+    .from("issues")
+    .update({
+      status: "resolved",
+      resolved_by: user.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.log("エラーの詳細", error);
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ message: "Issue resolved", issue: data })
+});
+
 export default issues;

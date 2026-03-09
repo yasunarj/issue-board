@@ -113,6 +113,36 @@ const IssuesPage = () => {
     }
   };
 
+  const handleResolvedIssue = async (issueId: string) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setMessage({ text: "ログインしてください", type: "error" });
+      return;
+    }
+    
+    const res = await fetch(
+      `http://localhost:8787/issues/${issueId}/resolve`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage({ text: data.error ?? "resolve失敗", type: "error" });
+      return;
+    }
+
+    setMessage({ text: "Issueを解決しました", type: "success" });
+
+    await fetchIssues();
+  };
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl">
@@ -166,6 +196,14 @@ const IssuesPage = () => {
           ) : (
             issues.map((issue) => (
               <div key={issue.id} className="border rounded p-4">
+                {issue.status === "open" && (
+                  <button
+                    className="mt-3 text-sm bg-green-600 text-white px-3 py-1 rounded"
+                    onClick={() => handleResolvedIssue(issue.id)}
+                  >
+                    解決する
+                  </button>
+                )}
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="font-bold">{issue.title}</h2>
                   <span className="text-sm border px-2 py-1 rounded">
