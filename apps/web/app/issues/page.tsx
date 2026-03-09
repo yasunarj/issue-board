@@ -37,7 +37,6 @@ const IssuesPage = () => {
   const fetchIssues = useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
-
     if (!token) {
       setMessage({ text: "ログインしてください", type: "success" });
       return;
@@ -116,12 +115,13 @@ const IssuesPage = () => {
   const handleResolvedIssue = async (issueId: string) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
+    console.log("トークンの確認", token);
 
     if (!token) {
       setMessage({ text: "ログインしてください", type: "error" });
       return;
     }
-    
+
     const res = await fetch(
       `http://localhost:8787/issues/${issueId}/resolve`,
       {
