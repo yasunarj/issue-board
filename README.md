@@ -43,3 +43,5 @@ git checkout -b ...
 
 
 ・解決すみのIssueは別枠へ移動させる。完了ページの作成
+・実装が終わったら、のちにAI機能を搭載させる。
+https://chatgpt.com/c/69aeaad5-1ee0-83a5-87e6-ff8d8e451ae1
