@@ -26,3 +26,9 @@ export type IssueComment = {
   created_at: string;
   user_profile: ProfileRef | null;
 };
+
+export type IssueCheck = {
+  user_id: string;
+  create_at: string;
+  user_profile: ProfileRef
+}

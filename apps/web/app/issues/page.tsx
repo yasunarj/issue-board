@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
-import type { Issue, IssueComment } from "./types";
+import type { Issue, IssueCheck, IssueComment } from "./types";
 import CommentForm from "./components/CommentForm";
 import IssueCard from "./components/IssueCard";
 import IssueForm from "./components/IssueForm";
@@ -26,6 +26,40 @@ const IssuesPage = () => {
   const [commentLoadingByIssue, setCommentLoadingByIssue] = useState<
     Record<string, boolean>
   >({});
+  const [checkByIssue, setCheckByIssue] = useState<
+    Record<string, IssueCheck[]>
+  >({});
+
+  const fetchCheck = useCallback(async (issueId: string) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setMessage({ text: "ログインしてください", type: "error" });
+      return;
+    }
+
+    const res = await fetch(
+      `http://localhost:8787/issues/${issueId}/comments`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage({
+        text: data.error ?? "確認状況の取得に失敗しました",
+        type: "error",
+      });
+      return;
+    }
+
+    setCheckByIssue((prev) => ({
+      ...prev,
+      [issueId]: data.checks ?? [],
+    }));
+  }, []);
 
   const fetchComments = useCallback(async (issueId: string) => {
     const { data: sessionData } = await supabase.auth.getSession();
