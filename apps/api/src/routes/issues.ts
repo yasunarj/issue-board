@@ -192,5 +192,104 @@ issues.post("/:id/comments", requireRole(["admin", "member"]), async (c) => {
     return c.json({ error: "invalid request" }, 400);
   }
 })
+
+issues.get("/:id/checks", requireRole(["admin", "member", "viewer"]), async (c) => {
+  const issueId = c.req.param("id");
+
+  // 該当するissueが存在するかをチェックする
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id")
+    .eq("id", issueId)
+    .single();
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
+  // 該当するissueにチェック済みがあるかどうかを調べる。ついでにjoinしてチェックしたユーザーの情報も併せてprofilesテーブルから取得する
+  const { data: checks, error: checksError } = await supabaseAdmin
+    .from("issue_checks")
+    .select(`
+    id,
+    issue_id,
+    user_id,
+    checked_at,
+    user_profile:profiles!issue_checks_user_id_fkey (
+      id,
+      role
+    )
+    `)
+    .eq("issue_id", issueId)
+    .order("checked_at", { ascending: true });
+
+  if (checksError) {
+    return c.json({ error: "Failed to fetch checks" }, 500);
+  }
+
+  return c.json({ ok: true, checks })
+})
+
+issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) => {
+  const issueId = c.req.param("id");
+  const user = c.get("user");
+
+  // ここで対象となるissueが存在するのかを確認する
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id")
+    .eq("id", issueId)
+    .single();
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
+  // 次にissue_checkテーブルから該当するissueとログインしているユーザーのidが存在しているかをチェックする
+  const { data: existingCheck, error: existingCheckError } = await supabaseAdmin
+    .from("issue_checks")
+    .select("id")
+    .eq("issue_id", issueId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingCheckError) {
+    console.error(existingCheckError);
+    return c.json({ error: "Failed to check existing record" }, 500);
+  }
+
+  // もしもテーブルにデータがあればすでにチェック済なのでinsertはしないようにする
+  if (existingCheck) {
+    return c.json({
+      message: "Already checked",
+      alreadyChecked: true,
+    });
+  }
+
+  // テーブルにデータがないということは未チェックなのでここでinsertをする
+  const { data: check, error: insertError } = await supabaseAdmin
+    .from("issue_checks")
+    .insert({
+      issue_id: issueId,
+      user_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error(insertError);
+    return c.json({ error: "Failed to create check" }, 500);
+  }
+
+  return c.json(
+    {
+      message: "Issue checked",
+      alreadyChecked: false,
+      check,
+    },
+    201
+  );
+});
+
 export default issues;
 
