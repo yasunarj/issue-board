@@ -26,11 +26,11 @@ const IssuesPage = () => {
   const [commentLoadingByIssue, setCommentLoadingByIssue] = useState<
     Record<string, boolean>
   >({});
-  const [checkByIssue, setCheckByIssue] = useState<
+  const [checksByIssue, setCheckByIssue] = useState<
     Record<string, IssueCheck[]>
   >({});
 
-  const fetchCheck = useCallback(async (issueId: string) => {
+  const fetchChecks = useCallback(async (issueId: string) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
     if (!token) {
@@ -38,12 +38,9 @@ const IssuesPage = () => {
       return;
     }
 
-    const res = await fetch(
-      `http://localhost:8787/issues/${issueId}/comments`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
+    const res = await fetch(`http://localhost:8787/issues/${issueId}/checks`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     const data = await res.json();
 
@@ -97,7 +94,6 @@ const IssuesPage = () => {
   const fetchIssues = useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
-    console.log("tokenの確認", token);
     if (!token) {
       setMessage({ text: "ログインしてください", type: "error" });
       return;
@@ -121,8 +117,9 @@ const IssuesPage = () => {
 
     for (const issue of fetchedIssues) {
       await fetchComments(issue.id);
+      await fetchChecks(issue.id);
     }
-  }, [fetchComments]);
+  }, [fetchComments, fetchChecks]);
 
   useEffect(() => {
     fetchIssues();
@@ -263,6 +260,40 @@ const IssuesPage = () => {
     }
   };
 
+  const handleCheckIssue = async (issueId: string) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setMessage({ text: "ログインしてください", type: "error" });
+      return;
+    }
+
+    const res = await fetch(`http://localhost:8787/issues/${issueId}/check`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage({
+        text: data.error ?? "確認登録に失敗しました",
+        type: "error",
+      });
+      return;
+    }
+
+    await fetchChecks(issueId);
+
+    if (data.alreadyChecked) {
+      setMessage({ text: "すでに確認済です", type: "success" });
+    } else {
+      setMessage({ text: "確認しました", type: "success" });
+    }
+  };
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl">
@@ -301,6 +332,31 @@ const IssuesPage = () => {
                   handleResolvedIssue={handleResolvedIssue}
                   commentsByIssue={commentsByIssue}
                 />
+
+                <div className="border-t pt-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                      onClick={() => handleCheckIssue(issue.id)}
+                    >
+                      見ました
+                    </button>
+
+                    <span className="text-gray-600">
+                      確認済み: {(checksByIssue[issue.id] ?? []).length}人
+                    </span>
+                  </div>
+
+                  {(checksByIssue[issue.id] ?? []).length > 0 && (
+                    <div className="mt-2 text-xs text-gray-600 flex flex-col gap-1">
+                      {(checksByIssue[issue.id] ?? []).map((check) => (
+                        <span key={check.user_id}>
+                          {check.user_profile?.role ?? "不明"} ({check.user_id})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <CommentForm
                   issueId={issue.id}
