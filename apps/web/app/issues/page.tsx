@@ -6,6 +6,7 @@ import type { Issue, IssueCheck, IssueComment } from "./types";
 import CommentForm from "./components/CommentForm";
 import IssueCard from "./components/IssueCard";
 import IssueForm from "./components/IssueForm";
+import CheckSection from "./components/CheckSection";
 
 const IssuesPage = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -342,36 +343,12 @@ const IssuesPage = () => {
                   commentsByIssue={commentsByIssue}
                 />
 
-                <div className="border-t pt-3 text-sm">
-                  <div className="flex items-center gap-3">
-                    <button
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs"
-                      onClick={() => handleCheckIssue(issue.id)}
-                    >
-                      見ました
-                    </button>
-
-                    <span className="text-gray-600">
-                      確認済み: {(checksByIssue[issue.id] ?? []).length}人
-                    </span>
-
-                    {checkMessageByIssue[issue.id] && (
-                      <span className="text-green-600 text-xs">
-                        {checkMessageByIssue[issue.id]}
-                      </span>
-                    )}
-                  </div>
-
-                  {(checksByIssue[issue.id] ?? []).length > 0 && (
-                    <div className="mt-2 text-xs text-gray-600 flex flex-col gap-1">
-                      {(checksByIssue[issue.id] ?? []).map((check) => (
-                        <span key={check.user_id}>
-                          {check.user_profile?.role ?? "不明"} ({check.user_id})
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <CheckSection
+                  issueId={issue.id}
+                  checks={checksByIssue[issue.id] ?? []}
+                  onCheck={handleCheckIssue}
+                  resultMessage={checkMessageByIssue[issue.id] ?? null}
+                />
 
                 <CommentForm
                   issueId={issue.id}
@@ -392,3 +369,5 @@ const IssuesPage = () => {
 };
 
 export default IssuesPage;
+
+// リファクタリング中。とりあえずcheckは終わったので次はIssueCardをさらに分割する
