@@ -26,8 +26,11 @@ const IssuesPage = () => {
   const [commentLoadingByIssue, setCommentLoadingByIssue] = useState<
     Record<string, boolean>
   >({});
-  const [checksByIssue, setCheckByIssue] = useState<
+  const [checksByIssue, setChecksByIssue] = useState<
     Record<string, IssueCheck[]>
+  >({});
+  const [checkMessageByIssue, setCheckMessageByIssue] = useState<
+    Record<string, string>
   >({});
 
   const fetchChecks = useCallback(async (issueId: string) => {
@@ -52,7 +55,7 @@ const IssuesPage = () => {
       return;
     }
 
-    setCheckByIssue((prev) => ({
+    setChecksByIssue((prev) => ({
       ...prev,
       [issueId]: data.checks ?? [],
     }));
@@ -288,9 +291,15 @@ const IssuesPage = () => {
     await fetchChecks(issueId);
 
     if (data.alreadyChecked) {
-      setMessage({ text: "すでに確認済です", type: "success" });
+      setCheckMessageByIssue((prev) => ({
+        ...prev,
+        [issueId]: "すでに確認済です",
+      }));
     } else {
-      setMessage({ text: "確認しました", type: "success" });
+      setCheckMessageByIssue((prev) => ({
+        ...prev,
+        [issueId]: "確認しました",
+      }));
     }
   };
 
@@ -345,6 +354,12 @@ const IssuesPage = () => {
                     <span className="text-gray-600">
                       確認済み: {(checksByIssue[issue.id] ?? []).length}人
                     </span>
+
+                    {checkMessageByIssue[issue.id] && (
+                      <span className="text-green-600 text-xs">
+                        {checkMessageByIssue[issue.id]}
+                      </span>
+                    )}
                   </div>
 
                   {(checksByIssue[issue.id] ?? []).length > 0 && (
