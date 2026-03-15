@@ -369,5 +369,3 @@ const IssuesPage = () => {
 };
 
 export default IssuesPage;
-
-// リファクタリング中。とりあえずcheckは終わったので次はIssueCardをさらに分割する
