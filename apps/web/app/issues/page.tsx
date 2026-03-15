@@ -98,6 +98,7 @@ const IssuesPage = () => {
   const fetchIssues = useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
+    console.log(token);
     if (!token) {
       setMessage({ text: "ログインしてください", type: "error" });
       return;

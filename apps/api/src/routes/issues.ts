@@ -86,6 +86,44 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
   )
 });
 
+issues.get("/:id", requireRole(["admin", "member", "viewer"]), async (c) => {
+  const issueId = c.req.param("id");
+
+  const { data, error } = await supabaseAdmin
+    .from("issues")
+    .select(`
+      id,
+      title,
+      description,
+      status,
+      due_date,
+      resolved_at,
+      created_at,
+      updated_at,
+      created_by,
+      resolved_by,
+      created_by_profile:profiles!issues_created_by_fkey (
+        id,
+        role
+      ),
+      resolved_by_profile:profiles!issues_resolved_by_fkey (
+        id,
+        role
+      )
+    `)
+    .eq("id", issueId)
+    .single()
+
+  if (error || !data) {
+    return c.json({ error: "Issue not found", detail: error.message }, 404);
+  }
+
+  return c.json({
+    ok: true,
+    issue: data,
+  })
+})
+
 issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
   const id = c.req.param("id");
   const user = c.get("user");

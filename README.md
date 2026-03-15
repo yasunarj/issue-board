@@ -36,6 +36,11 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # issue-borad
 
+
+<!-- 開発用 -->
+curl -X GET "http://localhost:8787/issues/21db1ca0-28c0-448e-8927-b7ee7e79b29e" \
+  -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjZjYTllZjM0LWVmNzQtNDBiNi04YWUxLTEwZDBmMGE2ZmEzOSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3VycHZqZWRna3pueXVnbG5jbWh1LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI2YWRkMGQ0MS03ZjgyLTQzN2YtODhhYi0zMzU1NDU4NGU1Y2YiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzczNTcwMTQwLCJpYXQiOjE3NzM1NjY1NDAsImVtYWlsIjoieWFzdW5hcmpAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzI5NTIyNjB9XSwic2Vzc2lvbl9pZCI6ImVjYWY5Y2NiLTRlNGItNGYxZC1hODdiLWYyNTJkNTZkMzVmZiIsImlzX2Fub255bW91cyI6ZmFsc2V9.ReaUHg5ti3kxfVOgkzvoKX0_Y1Mkx5oKSiSpOWPG1tHvdVSiM5082Sn6KxFVr9GEpMYHbcUDEe8ykUbSzDdRLQ"
+
 git fetch --all --prune
 git push origin --delete feature/...
 git merge feature/...
