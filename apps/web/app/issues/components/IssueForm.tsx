@@ -1,19 +1,68 @@
 "use client";
 
-import { Dispatch, SetStateAction } from "react";
+import { supabase } from "@/lib/supabase/client";
+import {  Dispatch, SetStateAction, useState } from "react";
 
-type IssueFormProps = {
-  title: string;
-  setTitle: Dispatch<SetStateAction<string>>;
-  description: string;
-  setDescription: Dispatch<SetStateAction<string>>;
-  dueDate: string;
-  setDueDate: Dispatch<SetStateAction<string>>;
-  onSubmitting: () => void;
-  isSubmitting: boolean;
-};
+type IssueForm = {
+  onCreatedIssue: () => void;
+  setMessage: Dispatch<SetStateAction<{text: string; type: "success" | "error" } | null>>
+}
 
-const IssueForm = ({ title, setTitle, description, setDescription, dueDate, setDueDate, onSubmitting, isSubmitting }: IssueFormProps) => {
+const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const formReset = () => {
+    setTitle("");
+    setDescription("");
+    setDueDate("");
+  };
+  
+  const handleCreateIssue = async () => {
+    setIsSubmitting(true);
+  
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+  
+      if (!token) {
+        setMessage({ text: "ログインしてください", type: "error" });
+        return;
+      }
+  
+      const res = await fetch("http://localhost:8787/issues", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          dueDate,
+        }),
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "issueの作成に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+  
+      formReset();
+      setMessage({ text: "issueを作成しました", type: "success" });
+  
+      onCreatedIssue();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="border rounded p-4 mb-6 flex flex-col gap-3">
       <h2 className="text-lg font-bold">Issue作成</h2>
@@ -42,7 +91,7 @@ const IssueForm = ({ title, setTitle, description, setDescription, dueDate, setD
 
       <button
         className="bg-black border text-white rounded p-2 disabled:opacity-50"
-        onClick={onSubmitting}
+        onClick={handleCreateIssue}
         disabled={isSubmitting}
       >
         {isSubmitting ? "作成中..." : "Issueを追加"}
@@ -52,3 +101,5 @@ const IssueForm = ({ title, setTitle, description, setDescription, dueDate, setD
 };
 
 export default IssueForm;
+
+

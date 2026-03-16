@@ -1,30 +1,17 @@
 "use client";
 import Link from "next/link";
-import type { Issue, IssueComment } from "../types";
-import CommentList from "./CommentList";
+import type { Issue } from "../types";
 
 type IssueCardProps = {
   issue: Issue;
-  handleResolvedIssue: (id: string) => void;
-  commentsByIssue: Record<string, IssueComment[]>;
 };
 
 const IssueCard = ({
   issue,
-  handleResolvedIssue,
-  commentsByIssue,
 }: IssueCardProps) => {
   return (
     <>
       <div>
-        {issue.status === "open" && (
-          <button
-            className="mt-3 text-sm bg-green-600 text-white px-3 py-1 rounded"
-            onClick={() => handleResolvedIssue(issue.id)}
-          >
-            解決する
-          </button>
-        )}
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-bold">{issue.title}</h2>
           <div className="flex items-center gap-2">
@@ -60,8 +47,6 @@ const IssueCard = ({
           </span>
         </div>
       </div>
-
-      <CommentList comments={commentsByIssue[issue.id]} />
     </>
   );
 };

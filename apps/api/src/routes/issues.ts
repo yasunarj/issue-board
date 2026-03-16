@@ -25,19 +25,11 @@ issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
     .select(`
       id,
       title,
-      description,
       status,
       due_date,
-      resolved_at,
       created_at,
-      updated_at,
       created_by,
-      resolved_by,
       created_by_profile:profiles!issues_created_by_fkey (
-        id,
-        role
-      ),
-      resolved_by_profile:profiles!issues_resolved_by_fkey (
         id,
         role
       )
