@@ -1,19 +1,28 @@
 "use client";
 import { useParams } from "next/navigation";
-import type { Issue } from "../types";
+import type { Issue, IssueCheck, IssueComment } from "../types";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
+import CommentList from "../components/CommentList";
+import CheckSection from "../components/CheckSection";
+import CommentForm from "../components/CommentForm";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
-  const issueId = params.id;
+  const issueId = params.id as string;
   const [issue, setIssue] = useState<Issue | null>(null);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
   } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [comments, setComments] = useState<IssueComment[]>([]);
+  const [commentInputs, setCommentInputs] = useState<string>("");
+  const [commentSubmitting, setCommentSubmitting] = useState<boolean>(false);
+  const [checks, setChecks] = useState<IssueCheck[]>([]);
+  const [checkMessage, setCheckMessage] = useState<string | null>(null);
+
 
   const fetchIssue = useCallback(async () => {
     try {
@@ -44,10 +53,139 @@ const IssueDetailPage = () => {
     }
   }, [issueId]);
 
+  const fetchComments = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setMessage({ text: "ログインしてください", type: "error" });
+      return;
+    }
+
+    const res = await fetch(
+      `http://localhost:8787/issues/${issueId}/comments`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage({ text: "コメントの取得に失敗しました", type: "error" });
+      return;
+    }
+
+    setComments(data.comments ?? []);
+  }, [issueId]);
+
+  const fetchChecks = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setMessage({ text: "ログインしてください", type: "error" });
+      return;
+    }
+
+    const res = await fetch(`http://localhost:8787/issues/${issueId}/checks`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage({ text: "確認状況の取得に失敗しました", type: "error" });
+      return;
+    }
+
+    setChecks(data.checks ?? []);
+  }, [issueId]);
+
   useEffect(() => {
     if (!issueId) return;
     fetchIssue();
-  }, [fetchIssue, issueId]);
+    fetchComments();
+    fetchChecks();
+  }, [fetchIssue, fetchComments, fetchChecks, issueId]);
+
+  const handleCreateComment = async () => {
+    const comment = commentInputs.trim();
+    if (!comment) {
+      setMessage({ text: "コメントを入力してください", type: "error" });
+      return;
+    }
+
+    setCommentSubmitting(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setMessage({ text: "ログインしてください", type: "error" });
+        return;
+      }
+
+      const res = await fetch(
+        `http://localhost:8787/issues/${issueId}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ comment }),
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "コメントの投稿に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      setCommentInputs("");
+      setMessage({ text: "コメントを投稿しました", type: "success" });
+      await fetchComments();
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const handleCheckIssue = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setMessage({ text: "ログインしてください", type: "error" });
+      return;
+    }
+
+    const res = await fetch(`http://localhost:8787/issues/${issueId}/check`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage({
+        text: data.error ?? "確認登録に失敗しました",
+        type: "error",
+      });
+      return;
+    }
+
+    await fetchChecks();
+    setCheckMessage(data.alreadyChecked ? "既に確認済です" : "確認しました");
+  };
 
   return (
     <main className="min-h-screen p-6">
@@ -87,7 +225,7 @@ const IssueDetailPage = () => {
             <div className="text-xs text-gray-600 flex flex-col gap-1">
               <span>
                 作成者: {issue.created_by_profile?.role ?? "不明"}{" "}
-                (issue.created_by)
+                ({issue.created_by})
               </span>
               <span>期限: {issue.due_date ?? "-"}</span>
               <span>
@@ -100,6 +238,21 @@ const IssueDetailPage = () => {
                   : "-"}
               </span>
             </div>
+
+            <CommentList comments={comments} />
+            <CheckSection
+              issueId={issueId}
+              checks={checks ?? []}
+              onCheck={handleCheckIssue}
+              resultMessage={checkMessage ?? null}
+            />
+            <CommentForm
+              issueId={issueId}
+              value={commentInputs}
+              onChange={(e) => setCommentInputs(e)}
+              onSubmitting={handleCreateComment}
+              isSubmitting={commentSubmitting}
+            />
           </div>
         )}
       </div>

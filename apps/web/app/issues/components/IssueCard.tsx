@@ -1,14 +1,19 @@
 "use client";
+import Link from "next/link";
 import type { Issue, IssueComment } from "../types";
 import CommentList from "./CommentList";
 
 type IssueCardProps = {
   issue: Issue;
   handleResolvedIssue: (id: string) => void;
-  commentsByIssue: Record<string, IssueComment[]>
-}
+  commentsByIssue: Record<string, IssueComment[]>;
+};
 
-const IssueCard = ({ issue, handleResolvedIssue, commentsByIssue  }: IssueCardProps) => {
+const IssueCard = ({
+  issue,
+  handleResolvedIssue,
+  commentsByIssue,
+}: IssueCardProps) => {
   return (
     <>
       <div>
@@ -22,9 +27,18 @@ const IssueCard = ({ issue, handleResolvedIssue, commentsByIssue  }: IssueCardPr
         )}
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-bold">{issue.title}</h2>
-          <span className="text-sm border px-2 py-1 rounded">
-            {issue.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/issues/${issue.id}`}
+              className="text-xs underline underline-offset-4"
+            >
+              詳細
+            </Link>
+
+            <span className="text-sm border px-2 py-1 rounded">
+              {issue.status}
+            </span>
+          </div>
         </div>
 
         <p className="text-sm mb-3 whitespace-pre-wrap">{issue.description}</p>
@@ -47,7 +61,7 @@ const IssueCard = ({ issue, handleResolvedIssue, commentsByIssue  }: IssueCardPr
         </div>
       </div>
 
-      <CommentList comments={commentsByIssue[issue.id]}/>
+      <CommentList comments={commentsByIssue[issue.id]} />
     </>
   );
 };

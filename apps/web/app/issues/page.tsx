@@ -98,7 +98,7 @@ const IssuesPage = () => {
   const fetchIssues = useCallback(async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
-    console.log(token);
+    // console.log(token);　トークンの確認はここから
     if (!token) {
       setMessage({ text: "ログインしてください", type: "error" });
       return;
@@ -118,7 +118,17 @@ const IssuesPage = () => {
     }
 
     const fetchedIssues = data.issues ?? [];
-    setIssues(fetchedIssues);
+
+    const sortedIssues = [...fetchedIssues].toSorted((a, b) => { 
+      //[...]スプレット構文を使用している理由はsortは元のstateまで変えてしまうのでコピーして使用するのが良い
+      if (a.status !== b.status) {
+        return a.status === "open" ? -1 : 1;
+      }
+
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    })
+
+    setIssues(sortedIssues);
 
     for (const issue of fetchedIssues) {
       await fetchComments(issue.id);
