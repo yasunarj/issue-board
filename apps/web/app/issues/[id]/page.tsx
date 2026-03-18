@@ -1,7 +1,8 @@
 "use client";
 import { useParams } from "next/navigation";
-import type { Issue, IssueCheck, IssueComment } from "../types";
+import type { IssueDetail, IssueCheck, IssueComment } from "../types";
 import { useCallback, useEffect, useState } from "react";
+import { getAccessToken } from "@/app/lib/api/getAccessToken";
 import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import CommentList from "../components/CommentList";
@@ -11,7 +12,7 @@ import CommentForm from "../components/CommentForm";
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
-  const [issue, setIssue] = useState<Issue | null>(null);
+  const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
@@ -23,15 +24,9 @@ const IssueDetailPage = () => {
   const [checks, setChecks] = useState<IssueCheck[]>([]);
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
 
-
   const fetchIssue = useCallback(async () => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        setMessage({ text: "ログインしてください", type: "error" });
-      }
+      const token = await getAccessToken();
 
       const res = await fetch(`http://localhost:8787/issues/${issueId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -48,60 +43,66 @@ const IssueDetailPage = () => {
       }
 
       setIssue(data.issue ?? null);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "不明なエラー";
+      setMessage({ text: message, type: "error" });
     } finally {
       setIsLoading(false);
     }
   }, [issueId]);
 
   const fetchComments = useCallback(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setMessage({ text: "ログインしてください", type: "error" });
-      return;
-    }
+    try {
+      const token = await getAccessToken();
 
-    const res = await fetch(
-      `http://localhost:8787/issues/${issueId}/comments`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        `http://localhost:8787/issues/${issueId}/comments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      },
-    );
+      );
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setMessage({ text: "コメントの取得に失敗しました", type: "error" });
-      return;
+      if (!res.ok) {
+        setMessage({ text: "コメントの取得に失敗しました", type: "error" });
+        return;
+      }
+
+      setComments(data.comments ?? []);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "不明なエラー";
+      setMessage({ text: message, type: "error" });
     }
-
-    setComments(data.comments ?? []);
   }, [issueId]);
 
   const fetchChecks = useCallback(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setMessage({ text: "ログインしてください", type: "error" });
-      return;
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch(
+        `http://localhost:8787/issues/${issueId}/checks`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({ text: "確認状況の取得に失敗しました", type: "error" });
+        return;
+      }
+
+      setChecks(data.checks ?? []);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "不明なエラー";
+      setMessage({ text: message, type: "error" });
     }
-
-    const res = await fetch(`http://localhost:8787/issues/${issueId}/checks`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage({ text: "確認状況の取得に失敗しました", type: "error" });
-      return;
-    }
-
-    setChecks(data.checks ?? []);
   }, [issueId]);
 
   useEffect(() => {
@@ -121,12 +122,7 @@ const IssueDetailPage = () => {
     setCommentSubmitting(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) {
-        setMessage({ text: "ログインしてください", type: "error" });
-        return;
-      }
+      const token = await getAccessToken();
 
       const res = await fetch(
         `http://localhost:8787/issues/${issueId}/comments`,
@@ -153,38 +149,41 @@ const IssueDetailPage = () => {
       setCommentInputs("");
       setMessage({ text: "コメントを投稿しました", type: "success" });
       await fetchComments();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "不明なエラー";
+      setMessage({ text: message, type: "error" });
     } finally {
       setCommentSubmitting(false);
     }
   };
 
   const handleCheckIssue = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) {
-      setMessage({ text: "ログインしてください", type: "error" });
-      return;
-    }
+    try {
+      const token = await getAccessToken();
 
-    const res = await fetch(`http://localhost:8787/issues/${issueId}/check`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage({
-        text: data.error ?? "確認登録に失敗しました",
-        type: "error",
+      const res = await fetch(`http://localhost:8787/issues/${issueId}/check`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      return;
-    }
 
-    await fetchChecks();
-    setCheckMessage(data.alreadyChecked ? "既に確認済です" : "確認しました");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "確認登録に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      await fetchChecks();
+      setCheckMessage(data.alreadyChecked ? "既に確認済です" : "確認しました");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "不明なエラー";
+      setMessage({ text: message, type: "error" });
+    }
   };
 
   return (
@@ -224,8 +223,8 @@ const IssueDetailPage = () => {
 
             <div className="text-xs text-gray-600 flex flex-col gap-1">
               <span>
-                作成者: {issue.created_by_profile?.role ?? "不明"}{" "}
-                ({issue.created_by})
+                作成者: {issue.created_by_profile?.role ?? "不明"} (
+                {issue.created_by})
               </span>
               <span>期限: {issue.due_date ?? "-"}</span>
               <span>

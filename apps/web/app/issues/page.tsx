@@ -1,52 +1,53 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase/client";
-import type { Issue } from "./types";
+import type { IssueListItem } from "./types";
 import IssueCard from "./components/IssueCard";
 import IssueForm from "./components/IssueForm";
+import { getAccessToken } from "../lib/api/getAccessToken";
 
 const IssuesPage = () => {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState<IssueListItem[]>([]);
   const [message, setMessage] = useState<{
     text: string;
     type: "error" | "success";
   } | null>(null);
 
   const fetchIssues = useCallback(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    // console.log(token);　トークンの確認はここから
-    if (!token) {
-      setMessage({ text: "ログインしてください", type: "error" });
-      return;
-    }
+    try {
+      const token = await getAccessToken();
 
-    const res = await fetch("http://localhost:8787/issues", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      const res = await fetch("http://localhost:8787/issues", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setMessage({ text: data.error ?? "取得に失敗しました", type: "error" });
-      return;
-    }
-
-    const fetchedIssues = data.issues ?? [];
-
-    const sortedIssues = [...fetchedIssues].toSorted((a, b) => { 
-      //[...]スプレット構文を使用している理由はsortは元のstateまで変えてしまうのでコピーして使用するのが良い
-      if (a.status !== b.status) {
-        return a.status === "open" ? -1 : 1;
+      if (!res.ok) {
+        setMessage({ text: data.error ?? "取得に失敗しました", type: "error" });
+        return;
       }
 
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    })
+      const fetchedIssues = data.issues ?? [];
 
-    setIssues(sortedIssues);
+      const sortedIssues = [...fetchedIssues].sort((a, b) => {
+        //[...]スプレット構文を使用している理由はsortは元のstateまで変えてしまうのでコピーして使用するのが良い
+        if (a.status !== b.status) {
+          return a.status === "open" ? -1 : 1;
+        }
+
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      });
+
+      setIssues(sortedIssues);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "不明なエラーです";
+      setMessage({ text: message, type: "error" });
+    }
   }, []);
 
   useEffect(() => {
@@ -67,7 +68,7 @@ const IssuesPage = () => {
           </p>
         )}
 
-        <IssueForm onCreatedIssue={fetchIssues} setMessage={setMessage}/>
+        <IssueForm onCreatedIssue={fetchIssues} setMessage={setMessage} />
 
         <div className="flex flex-col gap-4">
           {issues.length === 0 ? (
@@ -78,9 +79,7 @@ const IssuesPage = () => {
                 key={issue.id}
                 className="border rounded p-4 flex flex-col gap-4"
               >
-                <IssueCard
-                  issue={issue}
-                />
+                <IssueCard issue={issue} />
               </div>
             ))
           )}
@@ -91,5 +90,3 @@ const IssuesPage = () => {
 };
 
 export default IssuesPage;
-
-// リファクタリング中。訂正するところを確認して進める。

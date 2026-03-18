@@ -54,3 +54,4 @@ https://chatgpt.com/c/69aeaad5-1ee0-83a5-87e6-ff8d8e451ae1
 ・admin のみ確認者一覧の詳細を表示する
   -そのために/me取得と role 判定を追加する
   -将来的には profiles.display_name を追加して名前表示にしたい
+・一覧のところにコメントが何件あるかを確認できるようにしたい

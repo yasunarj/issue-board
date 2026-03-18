@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase/client";
 import {  Dispatch, SetStateAction, useState } from "react";
 
 type IssueForm = {
-  onCreatedIssue: () => void;
+  onCreatedIssue: () => Promise<void>;
   setMessage: Dispatch<SetStateAction<{text: string; type: "success" | "error" } | null>>
 }
 
@@ -58,7 +58,7 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
       formReset();
       setMessage({ text: "issueを作成しました", type: "success" });
   
-      onCreatedIssue();
+      await onCreatedIssue();
     } finally {
       setIsSubmitting(false);
     }

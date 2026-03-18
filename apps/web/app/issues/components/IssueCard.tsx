@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
-import type { Issue } from "../types";
+import type { IssueListItem } from "../types";
 
 type IssueCardProps = {
-  issue: Issue;
+  issue: IssueListItem;
 };
 
 const IssueCard = ({
@@ -28,18 +28,10 @@ const IssueCard = ({
           </div>
         </div>
 
-        <p className="text-sm mb-3 whitespace-pre-wrap">{issue.description}</p>
-
         <div className="text-xs text-gray-600 flex flex-col gap-1">
           <span>
             作成者: {issue.created_by_profile?.role ?? "不明"} (
             {issue.created_by})
-          </span>
-          <span>
-            解決者:{" "}
-            {issue.resolved_by_profile
-              ? `${issue.resolved_by_profile.role} (${issue.resolved_by_profile.id})`
-              : "-"}
           </span>
           <span>期限: {issue.due_date ?? "-"}</span>
           <span>

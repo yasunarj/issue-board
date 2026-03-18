@@ -3,7 +3,17 @@ export type ProfileRef = {
   role: "admin" | "member" | "viewer";
 };
 
-export type Issue = {
+export type IssueListItem = {
+  id: string;
+  title: string;
+  status: "open" | "resolved";
+  due_date: string;
+  created_at: string;
+  created_by: string;
+  created_by_profile: ProfileRef | null;
+}
+
+export type IssueDetail = {
   id: string;
   title: string;
   description: string;
@@ -28,7 +38,15 @@ export type IssueComment = {
 };
 
 export type IssueCheck = {
+  id: string;
+  issue_id: string;
   user_id: string;
   create_at: string;
   user_profile: ProfileRef
+}
+
+export type Me = {
+  id: string;
+  email: string | null
+  role: "admin" | "member" | "viewer";
 }
