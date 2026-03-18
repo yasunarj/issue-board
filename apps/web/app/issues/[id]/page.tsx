@@ -3,7 +3,6 @@ import { useParams } from "next/navigation";
 import type { IssueDetail, IssueCheck, IssueComment } from "../types";
 import { useCallback, useEffect, useState } from "react";
 import { getAccessToken } from "@/app/lib/api/getAccessToken";
-import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import CommentList from "../components/CommentList";
 import CheckSection from "../components/CheckSection";

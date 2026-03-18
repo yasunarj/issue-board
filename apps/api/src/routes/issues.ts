@@ -13,6 +13,12 @@ const createIssueSchema = z.object({
   dueDate: z.union([z.iso.date(), z.literal("")]).optional().transform((v) => (v === "" ? undefined : v)),
 });
 
+const updateIssueSchema = z.object({
+  title: z.string().trim().min(1, "title is required").max(100, "title too long"),
+  description: z.string().trim().min(1, "description is required").max(2000, "description too long"),
+  dueDate: z.union([z.iso.date(), z.literal("")]).optional().transform((v) => (v === "" ? undefined : v))
+})
+
 const createCommentSchema = z.object({
   comment: z.string().trim().min(1, "comment is required").max(1000, "comment too long"),
 });
