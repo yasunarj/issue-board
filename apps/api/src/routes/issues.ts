@@ -327,5 +327,77 @@ issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) 
   );
 });
 
+issues.patch("/:id", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("id");
+  const body = await c.req.json();
+  const result = updateIssueSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json({ error: result.error.issues[0]?.message ?? "Invalid request" }, 400);
+  }
+
+  const { title, description, dueDate } = result.data;
+
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id")
+    .eq("id", issueId)
+    .single();
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("issues")
+    .update({
+      title,
+      description,
+      due_date: dueDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", issueId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return c.json({ error: "Failed to update issue" }, 500);
+  }
+
+  return c.json({
+    message: "Issue updated",
+    issue: data,
+  })
+})
+
+issues.delete("/:id", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("id");
+
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id")
+    .eq("id", issueId)
+    .single()
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404)
+  }
+
+  const { error } = await supabaseAdmin
+    .from("issues")
+    .delete()
+    .eq("id", issueId);
+
+  if (error) {
+    console.error(error);
+    return c.json({ error: "Failed to delete issue" }, 500);
+  }
+
+  return c.json({
+    message: "Issue deleted",
+  })
+});
+
 export default issues;
 
