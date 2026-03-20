@@ -229,6 +229,36 @@ issues.post("/:id/comments", requireRole(["admin", "member"]), async (c) => {
   }
 })
 
+issues.delete("/:issueId/comments/:commentId", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("issueId");
+  const commentId = c.req.param("commentId");
+
+  const { data: comment, error: commentError } = await supabaseAdmin
+    .from("issue_comments")
+    .select("id, issue_id")
+    .eq("id", commentId)
+    .eq("issue_id", issueId)
+    .single();
+
+  if (commentError || !comment) {
+    return c.json({ error: "Comment not found" }, 404);
+  }
+
+  const { error } = await supabaseAdmin
+    .from("issue_comments")
+    .delete()
+    .eq("id", commentId);
+
+  if (error) {
+    console.error(error);
+    return c.json({ error: "Failed to delete comment" }, 500);
+  }
+
+  return c.json({
+    message: "Comment deleted",
+  })
+})
+
 issues.get("/:id/checks", requireRole(["admin", "member", "viewer"]), async (c) => {
   const issueId = c.req.param("id");
 

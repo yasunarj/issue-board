@@ -8,12 +8,11 @@ import CommentList from "../components/CommentList";
 import CheckSection from "../components/CheckSection";
 import CommentForm from "../components/CommentForm";
 import { useMe } from "@/app/hooks/useMe";
-import { supabase } from "@/lib/supabase/client";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
-  const { me, isAdmin } = useMe();
+  const { isAdmin } = useMe();
   const router = useRouter();
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [message, setMessage] = useState<{
@@ -280,7 +279,7 @@ const IssueDetailPage = () => {
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl flex flex-col gap-6">
-        <div className="flex item-center justify-between">
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Issue Detail</h1>
           <Link href="/issues" className="text-sm underline underline-offset-4">
             一覧へ戻る
@@ -305,9 +304,30 @@ const IssueDetailPage = () => {
           <div className="border rounded p-4 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-bold">{issue.title}</h2>
-              <span className="text-sm border px-2 py-1 rounded">
-                {issue.status}
-              </span>
+              {isAdmin ? (
+                <div className="flex justify-end gap-2">
+                  <span className="text-sm border px-2 py-1 rounded">
+                    {issue.status}
+                  </span>
+                  <button
+                    className="bg-yellow-500 text-black px-3 py-1 rounded text-sm"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    編集
+                  </button>
+                  <button
+                    className="bg-red-600 text-white px-3 py-1 rounded text-xs disabled:hidden"
+                    onClick={handleDeleteIssue}
+                    disabled={isEditing}
+                  >
+                    削除
+                  </button>
+                </div>
+              ) : (
+                <span className="text-sm border px-2 py-1 rounded">
+                  {issue.status}
+                </span>
+              )}
             </div>
 
             {isEditing ? (
@@ -382,22 +402,6 @@ const IssueDetailPage = () => {
               onSubmitting={handleCreateComment}
               isSubmitting={commentSubmitting}
             />
-          </div>
-        )}
-        {isAdmin && (
-          <div className="flex justify-end gap-2">
-            <button
-              className="bg-yellow-500 text-black px-3 py-1 rounded text-xs"
-              onClick={() => setIsEditing(true)}
-            >
-              編集
-            </button>
-            <button
-              className="bg-red-600 text-white px-3 py-1 rounded text-xs"
-              onClick={handleDeleteIssue}
-            >
-              削除
-            </button>
           </div>
         )}
       </div>
