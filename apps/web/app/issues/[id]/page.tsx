@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import type { IssueDetail, IssueCheck, IssueComment } from "../types";
 import { useCallback, useEffect, useState } from "react";
 import { getAccessToken } from "@/app/lib/api/getAccessToken";
@@ -7,10 +7,14 @@ import Link from "next/link";
 import CommentList from "../components/CommentList";
 import CheckSection from "../components/CheckSection";
 import CommentForm from "../components/CommentForm";
+import { useMe } from "@/app/hooks/useMe";
+import { supabase } from "@/lib/supabase/client";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
+  const { me, isAdmin } = useMe();
+  const router = useRouter();
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [message, setMessage] = useState<{
     text: string;
@@ -22,6 +26,12 @@ const IssueDetailPage = () => {
   const [commentSubmitting, setCommentSubmitting] = useState<boolean>(false);
   const [checks, setChecks] = useState<IssueCheck[]>([]);
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
+
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editDescription, setEditDescription] = useState<string>("");
+  const [editDueDate, setEditDueDate] = useState<string>("");
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   const fetchIssue = useCallback(async () => {
     try {
@@ -111,6 +121,14 @@ const IssueDetailPage = () => {
     fetchChecks();
   }, [fetchIssue, fetchComments, fetchChecks, issueId]);
 
+  useEffect(() => {
+    if (!issue) return;
+
+    setEditTitle(issue.title);
+    setEditDescription(issue.description);
+    setEditDueDate(issue.due_date ?? "");
+  }, [issue]);
+
   const handleCreateComment = async () => {
     const comment = commentInputs.trim();
     if (!comment) {
@@ -185,6 +203,80 @@ const IssueDetailPage = () => {
     }
   };
 
+  const handleDeleteIssue = async () => {
+    if (!confirm("本当に削除してよろしいですか？")) return;
+
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`http://localhost:8787/issues/${issueId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "削除に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      router.push("/issues");
+    } catch (e) {
+      setMessage({
+        text: e instanceof Error ? e.message : "削除中にエラーが発生しまいした",
+        type: "error",
+      });
+    }
+  };
+
+  const handleUpdateIssue = async () => {
+    setIsUpdating(true);
+
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch(`http://localhost:8787/issues/${issueId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          dueDate: editDueDate,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "更新に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      setMessage({ text: "更新しました", type: "success" });
+      setIsEditing(false);
+
+      await fetchIssue();
+    } catch (e) {
+      setMessage({
+        text: e instanceof Error ? e.message : "更新に失敗しました",
+        type: "error",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl flex flex-col gap-6">
@@ -218,7 +310,46 @@ const IssueDetailPage = () => {
               </span>
             </div>
 
-            <p className="whitespace-pre-wrap text-sm">{issue.description}</p>
+            {isEditing ? (
+              <div className="flex flex-col gap-2">
+                <input
+                  className="border rounded p-2 bg-white text-black"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                />
+                <textarea
+                  className="border rounded p-2 bg-white text-black"
+                  rows={8}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                />
+                <input
+                  type="date"
+                  className="border rounded p-2 bg-white text-black"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                />
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="border px-3 py-1 rounded"
+                    onClick={handleUpdateIssue}
+                    disabled={isUpdating}
+                  >
+                    保存
+                  </button>
+
+                  <button
+                    className="border px-3 py-1 rounded"
+                    onClick={() => setIsEditing(false)}
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="whitespace-pre-wrap text-sm">{issue.description}</p>
+            )}
 
             <div className="text-xs text-gray-600 flex flex-col gap-1">
               <span>
@@ -251,6 +382,22 @@ const IssueDetailPage = () => {
               onSubmitting={handleCreateComment}
               isSubmitting={commentSubmitting}
             />
+          </div>
+        )}
+        {isAdmin && (
+          <div className="flex justify-end gap-2">
+            <button
+              className="bg-yellow-500 text-black px-3 py-1 rounded text-xs"
+              onClick={() => setIsEditing(true)}
+            >
+              編集
+            </button>
+            <button
+              className="bg-red-600 text-white px-3 py-1 rounded text-xs"
+              onClick={handleDeleteIssue}
+            >
+              削除
+            </button>
           </div>
         )}
       </div>

@@ -83,7 +83,7 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
 
       <input
         type="date"
-        className="border rounded p-2"
+        className="border rounded p-2 bg-black text-white scheme-dark"
         placeholder="詳細"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
