@@ -13,12 +13,12 @@ type CommentListProps = {
 };
 
 const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) => {
-  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { isAdmin } = useMe();
 
   const handleCommentDelete = async (issueId: string, commentId: string) => {
     if (!confirm("本当に削除しても良いですか？")) return;
-    setIsDeleting(true);
+    setDeletingId(commentId);
     try {
       const token = await getAccessToken();
 
@@ -50,7 +50,7 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
         type: "error",
       });
     } finally {
-      setIsDeleting(false);
+      setDeletingId(null);
     }
   };
   return (
@@ -58,13 +58,13 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
       <h3 className="font-semibold mb-2">コメント</h3>
 
       {(comments ?? []).length === 0 ? (
-        <p className="text-sm text-gray-500">git まだコメントはありません</p>
+        <p className="text-sm text-gray-500">まだコメントはありません</p>
       ) : (
         <div className="flex flex-col gap-2">
           {(comments ?? []).map((comment) => (
             <div key={comment.id} className="border rounded p-3 bg-gray-900">
               <div
-                className={`text-xs text-gray-600 mb-1 ${isAdmin && "flex justify-between"}`}
+                className={`text-xs text-gray-600 mb-1 ${isAdmin ? "flex justify-between" : ""}`}
               >
                 投稿者: {comment.user_profile?.role ?? "不明"} (
                 {comment.user_id})
@@ -74,9 +74,9 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
                     onClick={() =>
                       handleCommentDelete(comment.issue_id, comment.id)
                     }
-                    disabled={isDeleting}
+                    disabled={deletingId === comment.id}
                   >
-                    {isAdmin ? "削除中" : "削除"}
+                    {deletingId === comment.id ? "削除中" : "削除"}
                   </button>
                 )}
               </div>
