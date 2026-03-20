@@ -388,7 +388,7 @@ const IssueDetailPage = () => {
               </span>
             </div>
 
-            <CommentList comments={comments} />
+            <CommentList comments={comments} setMessage={setMessage} fetchComments={fetchComments}/>
             <CheckSection
               issueId={issueId}
               checks={checks ?? []}
