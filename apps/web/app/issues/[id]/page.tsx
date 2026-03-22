@@ -410,3 +410,5 @@ const IssueDetailPage = () => {
 };
 
 export default IssueDetailPage;
+
+// 更新と削除は完了すみ。次に管理者のみcheckした人物を特定できるように修正する。
