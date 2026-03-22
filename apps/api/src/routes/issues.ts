@@ -5,7 +5,6 @@ import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import type { AppEnv } from "..";
 import { createAuditLog } from "../lib/auditLog";
-import { checkUserAgentEquals } from "hono/adapter";
 
 const issues = new Hono<AppEnv>();
 
@@ -513,6 +512,49 @@ issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) 
     },
     201
   );
+});
+
+issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("id");
+
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id")
+    .eq("id", issueId)
+    .single();
+
+  if (!issue || issueError) {
+    return c.json({ error: "issue not found" }, 404);
+  }
+
+  const { data: logs, error: logsError } = await supabaseAdmin
+    .from("audit_logs")
+    .select(`
+      id,
+      user_id,
+      action,
+      target_type,
+      target_id,
+      issue_id,
+      detail,
+      created_at,
+      user_profile:profiles:profiles!audit_log (
+      id,
+      role
+      )
+    `)
+    .eq("issue_id", issueId)
+    .order("created_at", { ascending: false });
+
+  if (logsError) {
+    console.error(logsError);
+    return c.json({ error: "Failed to fetch audit logs" }, 500);
+  }
+
+  return c.json({
+    ok: true,
+    logs: logs ?? []
+  })
 });
 
 export default issues;
