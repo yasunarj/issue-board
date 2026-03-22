@@ -4,6 +4,8 @@ import { supabaseAdmin } from "../lib/supabase";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import type { AppEnv } from "..";
+import { createAuditLog } from "../lib/auditLog";
+import { checkUserAgentEquals } from "hono/adapter";
 
 const issues = new Hono<AppEnv>();
 
@@ -75,6 +77,18 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+  await createAuditLog({
+    userId: user.id,
+    action: "issue.create",
+    targetType: "issue",
+    targetId: data.id,
+    issueId: data.id,
+    detail: {
+      title: data.title,
+      due_date: data.due_date,
+    },
+  });
+
   return c.json(
     {
       message: "Issue created",
@@ -122,6 +136,104 @@ issues.get("/:id", requireRole(["admin", "member", "viewer"]), async (c) => {
   })
 })
 
+issues.delete("/:id", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("id");
+  const user = c.get("user");
+
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id, title")
+    .eq("id", issueId)
+    .single()
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404)
+  }
+
+
+  const { error } = await supabaseAdmin
+    .from("issues")
+    .delete()
+    .eq("id", issueId)
+
+  if (error) {
+    console.error(error);
+    return c.json({ error: "Failed to delete issue" }, 500);
+  }
+
+  await createAuditLog({
+    userId: user.id,
+    action: "issue.delete",
+    targetType: "issue",
+    targetId: issue.id,
+    issueId: null,
+    detail: {
+      title: issue.title ?? null,
+    }
+  })
+
+  return c.json({
+    message: "Issue deleted",
+  })
+});
+
+issues.patch("/:id", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("id");
+  const body = await c.req.json();
+  const result = updateIssueSchema.safeParse(body);
+  const user = c.get("user");
+
+  if (!result.success) {
+    return c.json({ error: result.error.issues[0]?.message ?? "Invalid request" }, 400);
+  }
+
+  const { title, description, dueDate } = result.data;
+
+  const { data: issue, error: issueError } = await supabaseAdmin
+    .from("issues")
+    .select("id")
+    .eq("id", issueId)
+    .single();
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("issues")
+    .update({
+      title,
+      description,
+      due_date: dueDate,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", issueId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return c.json({ error: "Failed to update issue" }, 500);
+  }
+
+  await createAuditLog({
+    userId: user.id,
+    action: "issue.update",
+    targetType: "issue",
+    targetId: data.id,
+    issueId: data.id,
+    detail: {
+      title: data.title,
+      due_date: data.due_date,
+    },
+  });
+
+  return c.json({
+    message: "Issue updated",
+    issue: data,
+  })
+})
+
 issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
   const id = c.req.param("id");
   const user = c.get("user");
@@ -141,6 +253,18 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
     console.log("エラーの詳細", error);
     return c.json({ error: error.message }, 500);
   }
+
+  await createAuditLog({
+    userId: user.id,
+    action: "issue.resolve",
+    targetType: "issue",
+    targetId: data.id,
+    issueId: data.id,
+    detail: {
+      resolved_by: data.resolved_by,
+      resolved_at: data.resolved_at,
+    }
+  })
 
   return c.json({ message: "Issue resolved", issue: data })
 });
@@ -222,6 +346,17 @@ issues.post("/:id/comments", requireRole(["admin", "member"]), async (c) => {
       return c.json({ error: "Failed to create comment" }, 500);
     }
 
+    await createAuditLog({
+      userId: user.id,
+      action: "comment.create",
+      targetType: "comment",
+      targetId: insertComment.id,
+      issueId: issueId,
+      detail: {
+        body: insertComment.body,
+      }
+    })
+
     return c.json({ message: "comment created", comment: insertComment }, 201);
   } catch (e) {
     console.error(e);
@@ -232,10 +367,11 @@ issues.post("/:id/comments", requireRole(["admin", "member"]), async (c) => {
 issues.delete("/:issueId/comments/:commentId", requireRole(["admin"]), async (c) => {
   const issueId = c.req.param("issueId");
   const commentId = c.req.param("commentId");
+  const user = c.get("user");
 
   const { data: comment, error: commentError } = await supabaseAdmin
     .from("issue_comments")
-    .select("id, issue_id")
+    .select("id, issue_id, body")
     .eq("id", commentId)
     .eq("issue_id", issueId)
     .single();
@@ -253,6 +389,17 @@ issues.delete("/:issueId/comments/:commentId", requireRole(["admin"]), async (c)
     console.error(error);
     return c.json({ error: "Failed to delete comment" }, 500);
   }
+
+  await createAuditLog({
+    userId: user.id,
+    action: "comment.delete",
+    targetType: "comment",
+    targetId: comment.id,
+    issueId: comment.issue_id,
+    detail: {
+      body: comment.body
+    },
+  });
 
   return c.json({
     message: "Comment deleted",
@@ -347,6 +494,17 @@ issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) 
     return c.json({ error: "Failed to create check" }, 500);
   }
 
+  await createAuditLog({
+    userId: user.id,
+    action: "issue.check",
+    targetType: "check",
+    targetId: check.id,
+    issueId: issueId,
+    detail: {
+      checked_at: check.checked_at,
+    }
+  })
+
   return c.json(
     {
       message: "Issue checked",
@@ -355,78 +513,6 @@ issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) 
     },
     201
   );
-});
-
-issues.patch("/:id", requireRole(["admin"]), async (c) => {
-  const issueId = c.req.param("id");
-  const body = await c.req.json();
-  const result = updateIssueSchema.safeParse(body);
-
-  if (!result.success) {
-    return c.json({ error: result.error.issues[0]?.message ?? "Invalid request" }, 400);
-  }
-
-  const { title, description, dueDate } = result.data;
-
-  const { data: issue, error: issueError } = await supabaseAdmin
-    .from("issues")
-    .select("id")
-    .eq("id", issueId)
-    .single();
-
-  if (issueError || !issue) {
-    return c.json({ error: "Issue not found" }, 404);
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from("issues")
-    .update({
-      title,
-      description,
-      due_date: dueDate,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", issueId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error(error);
-    return c.json({ error: "Failed to update issue" }, 500);
-  }
-
-  return c.json({
-    message: "Issue updated",
-    issue: data,
-  })
-})
-
-issues.delete("/:id", requireRole(["admin"]), async (c) => {
-  const issueId = c.req.param("id");
-
-  const { data: issue, error: issueError } = await supabaseAdmin
-    .from("issues")
-    .select("id")
-    .eq("id", issueId)
-    .single()
-
-  if (issueError || !issue) {
-    return c.json({ error: "Issue not found" }, 404)
-  }
-
-  const { error } = await supabaseAdmin
-    .from("issues")
-    .delete()
-    .eq("id", issueId);
-
-  if (error) {
-    console.error(error);
-    return c.json({ error: "Failed to delete issue" }, 500);
-  }
-
-  return c.json({
-    message: "Issue deleted",
-  })
 });
 
 export default issues;
