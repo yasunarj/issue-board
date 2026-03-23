@@ -1,6 +1,7 @@
 export type ProfileRef = {
   id: string;
   role: "admin" | "member" | "viewer";
+  display_name: string | null;
 };
 
 export type IssueListItem = {
@@ -49,6 +50,7 @@ export type Me = {
   id: string;
   email: string | null
   role: "admin" | "member" | "viewer";
+  displayName: string | null;
 }
 
 export type AuditLog = {

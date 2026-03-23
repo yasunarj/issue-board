@@ -66,8 +66,7 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
               <div
                 className={`text-xs text-gray-600 mb-1 ${isAdmin ? "flex justify-between" : ""}`}
               >
-                投稿者: {comment.user_profile?.role ?? "不明"} (
-                {comment.user_id})
+                投稿者: {comment.user_profile?.display_name ?? "不明"}
                 {isAdmin && (
                   <button
                     className="border rounded px-2 py-1 text-white text-xs"

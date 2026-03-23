@@ -16,7 +16,7 @@ me.get("/", async (c) => {
   const user = c.get("user");
   const { data: profile, error } = await supabaseAdmin
     .from("profiles")
-    .select("role")
+    .select("role, display_name")
     .eq("id", user.id)
     .single();
 
@@ -28,6 +28,7 @@ me.get("/", async (c) => {
     userId: user.id,
     email: user.email,
     role: profile.role,
+    displayName: profile.display_name,
   })
 })
 

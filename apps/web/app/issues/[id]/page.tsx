@@ -450,8 +450,7 @@ const IssueDetailPage = () => {
 
             <div className="text-xs text-gray-600 flex flex-col gap-1">
               <span>
-                作成者: {issue.created_by_profile?.role ?? "不明"} (
-                {issue.created_by})
+                作成者: {issue.created_by_profile?.display_name ?? "不明"}さん
               </span>
               <span>期限: {issue.due_date ?? "-"}</span>
               <span>
@@ -501,7 +500,7 @@ const IssueDetailPage = () => {
                     {new Date(log.created_at).toLocaleString("ja-JP")}
                   </div>
                   <div>
-                    実行者: {log.user_profile?.role ?? "不明"} (
+                    実行者: {log.user_profile?.display_name ?? "不明"} (
                     {log.user_id ?? "unknown"})
                   </div>
                   <div>操作: {log.action}</div>

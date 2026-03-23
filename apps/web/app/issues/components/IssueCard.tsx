@@ -30,8 +30,7 @@ const IssueCard = ({
 
         <div className="text-xs text-gray-600 flex flex-col gap-1">
           <span>
-            作成者: {issue.created_by_profile?.role ?? "不明"} (
-            {issue.created_by})
+            作成者: {issue.created_by_profile?.display_name ?? "不明"}
           </span>
           <span>期限: {issue.due_date ?? "-"}</span>
           <span>

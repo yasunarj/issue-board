@@ -36,7 +36,7 @@ const CheckSection = ({
         <div className="mt-2 text-xs text-gray-600 flex flex-col gap-1">
           {checks.map((check) => (
             <span key={check.user_id}>
-              {check.user_profile?.role ?? "不明"} ({check.user_id})
+              {check.user_profile?.display_name ?? "不明"}さん
             </span>
           ))}
         </div>
@@ -46,3 +46,4 @@ const CheckSection = ({
 };
 
 export default CheckSection;
+// 現状ではチェックした人の名前とidも表示されるのでこれはadmin権限のものだけが見れるような設定に変更する。

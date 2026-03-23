@@ -38,7 +38,8 @@ issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
       created_by,
       created_by_profile:profiles!issues_created_by_fkey (
         id,
-        role
+        role,
+        display_name
       )
     `)
     .order("created_at", { ascending: false });
@@ -115,7 +116,8 @@ issues.get("/:id", requireRole(["admin", "member", "viewer"]), async (c) => {
       resolved_by,
       created_by_profile:profiles!issues_created_by_fkey (
         id,
-        role
+        role,
+        display_name
       ),
       resolved_by_profile:profiles!issues_resolved_by_fkey (
         id,
@@ -291,7 +293,8 @@ issues.get("/:id/comments", requireRole(["admin", "member", "viewer"]), async (c
       created_at,
       user_profile:profiles!issue_comments_user_id_fkey (
         id,
-        role
+        role,
+        display_name
       )
     `)
     .eq("issue_id", issueId)
@@ -429,7 +432,8 @@ issues.get("/:id/checks", requireRole(["admin", "member", "viewer"]), async (c) 
     checked_at,
     user_profile:profiles!issue_checks_user_id_fkey (
       id,
-      role
+      role,
+      display_name
     )
     `)
     .eq("issue_id", issueId)
@@ -539,7 +543,8 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
       created_at,
       user_profile:profiles!audit_logs_user_id_fkey (
       id,
-      role
+      role,
+      display_name
       )
     `)
     .eq("issue_id", issueId)
