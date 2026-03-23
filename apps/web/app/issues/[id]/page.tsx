@@ -33,6 +33,7 @@ const IssueDetailPage = () => {
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [isShowAuditLogs, setIsShowAuditLogs] = useState<boolean>(false);
 
   const fetchIssue = useCallback(async () => {
     try {
@@ -353,6 +354,9 @@ const IssueDetailPage = () => {
                   <span className="text-sm border px-2 py-1 rounded">
                     {issue.status}
                   </span>
+                  <button className="bg-purple-500 px-3 py-1 rounded text-sm" onClick={() => setIsShowAuditLogs((prev) => !prev)}>
+                    ログ
+                  </button>
                   <button
                     className="bg-yellow-500 text-black px-3 py-1 rounded text-sm"
                     onClick={() => setIsEditing(true)}
@@ -454,8 +458,8 @@ const IssueDetailPage = () => {
         )}
       </div>
 
-      {isAdmin && (
-        <div className="border rounded p-4 flex flex-col gap-3">
+      {(isAdmin && isShowAuditLogs) && (
+        <div className="border rounded p-4 flex flex-col gap-3 mt-8">
           <h3 className="font-semibold">監視ログ</h3>
 
           {auditLogs.length === 0 ? (
