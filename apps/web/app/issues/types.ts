@@ -50,3 +50,15 @@ export type Me = {
   email: string | null
   role: "admin" | "member" | "viewer";
 }
+
+export type AuditLog = {
+  id: string;
+  user_id: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  issue_id: string;
+  detail: Record<string, unknown>;
+  created_at: string;
+  user_profile: ProfileRef | null;
+}

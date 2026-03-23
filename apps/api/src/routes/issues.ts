@@ -516,7 +516,6 @@ issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) 
 
 issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
   const issueId = c.req.param("id");
-
   const { data: issue, error: issueError } = await supabaseAdmin
     .from("issues")
     .select("id")
@@ -538,7 +537,7 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
       issue_id,
       detail,
       created_at,
-      user_profile:profiles:profiles!audit_log (
+      user_profile:profiles!audit_logs_user_id_fkey (
       id,
       role
       )

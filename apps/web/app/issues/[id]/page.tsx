@@ -1,6 +1,6 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import type { IssueDetail, IssueCheck, IssueComment } from "../types";
+import type { IssueDetail, IssueCheck, IssueComment, AuditLog } from "../types";
 import { useCallback, useEffect, useState } from "react";
 import { getAccessToken } from "@/app/lib/api/getAccessToken";
 import Link from "next/link";
@@ -31,6 +31,8 @@ const IssueDetailPage = () => {
   const [editDescription, setEditDescription] = useState<string>("");
   const [editDueDate, setEditDueDate] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   const fetchIssue = useCallback(async () => {
     try {
@@ -113,12 +115,54 @@ const IssueDetailPage = () => {
     }
   }, [issueId]);
 
+  const fetchAuditLogs = useCallback(async () => {
+    if (!isAdmin) return;
+
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(
+        `http://localhost:8787/issues/${issueId}/audit-logs`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "監視ログの取得に失敗しました",
+          type: "error",
+        });
+      }
+
+      setAuditLogs(data.logs ?? []);
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "監視ログの取得に失敗しました";
+      setMessage({ text: message, type: "error" });
+    }
+  }, [isAdmin, issueId]);
+
   useEffect(() => {
     if (!issueId) return;
     fetchIssue();
     fetchComments();
     fetchChecks();
-  }, [fetchIssue, fetchComments, fetchChecks, issueId]);
+
+    if (isAdmin) {
+      fetchAuditLogs();
+    }
+  }, [
+    fetchIssue,
+    fetchComments,
+    fetchChecks,
+    issueId,
+    fetchAuditLogs,
+    isAdmin,
+  ]);
 
   useEffect(() => {
     if (!issue) return;
@@ -388,7 +432,11 @@ const IssueDetailPage = () => {
               </span>
             </div>
 
-            <CommentList comments={comments} setMessage={setMessage} fetchComments={fetchComments}/>
+            <CommentList
+              comments={comments}
+              setMessage={setMessage}
+              fetchComments={fetchComments}
+            />
             <CheckSection
               issueId={issueId}
               checks={checks ?? []}
@@ -405,6 +453,32 @@ const IssueDetailPage = () => {
           </div>
         )}
       </div>
+
+      {isAdmin && (
+        <div className="border rounded p-4 flex flex-col gap-3">
+          <h3 className="font-semibold">監視ログ</h3>
+
+          {auditLogs.length === 0 ? (
+            <p className="flex flex-col gap-2">監視ログはありません</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {auditLogs.map((log) => (
+                <div key={log.id} className="border rounded p-3 text-sm">
+                  <div className="text-xs text-gray-500 mb-1">
+                    {new Date(log.created_at).toLocaleString("ja-JP")}
+                  </div>
+                  <div>
+                    実行者: {log.user_profile?.role ?? "不明"} (
+                    {log.user_id ?? "unknown"})
+                  </div>
+                  <div>操作: {log.action}</div>
+                  <div>対象: {log.target_type}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 };
