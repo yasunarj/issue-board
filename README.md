@@ -37,10 +37,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 # issue-borad
 
 
-<!-- 開発用 -->
-
-  curl -X DELETE "http://localhost:8787/issues/13a573ac-96c0-4d3f-8857-e7f75f2fe22f" \
-  -H "Authorization: Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjZjYTllZjM0LWVmNzQtNDBiNi04YWUxLTEwZDBmMGE2ZmEzOSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3VycHZqZWRna3pueXVnbG5jbWh1LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI2YWRkMGQ0MS03ZjgyLTQzN2YtODhhYi0zMzU1NDU4NGU1Y2YiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzczOTEyODczLCJpYXQiOjE3NzM5MDkyNzMsImVtYWlsIjoieWFzdW5hcmpAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzI5NTIyNjB9XSwic2Vzc2lvbl9pZCI6ImVjYWY5Y2NiLTRlNGItNGYxZC1hODdiLWYyNTJkNTZkMzVmZiIsImlzX2Fub255bW91cyI6ZmFsc2V9.G-MzhI6mCr-Vg9oQgweA7B2vjZeLmveZx-6AL-WxaFY88zhfUOnv8WO80nCmJIVRsTSEMt19atc9unaJcnNVjw"
+<!-- 開発用 
 
 git fetch --all --prune
 git push origin --delete feature/...
@@ -53,6 +50,7 @@ git checkout -b ...
 https://chatgpt.com/c/69aeaad5-1ee0-83a5-87e6-ff8d8e451ae1
 ・登録したユーザーが何人いるのかを一覧で確認できるようにする。(issue_checkがあるので誰が見たのかを確認できると良い)
 ・admin のみ確認者一覧の詳細を表示する
-  -そのために/me取得と role 判定を追加する
   -将来的には profiles.display_name を追加して名前表示にしたい
 ・一覧のところにコメントが何件あるかを確認できるようにしたい
+・何かしらのアクションがあったと気にメールが届くようにnodemailerを使用したい
+・admin用の監視ログの一覧ページを作成する

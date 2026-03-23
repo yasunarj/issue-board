@@ -35,6 +35,27 @@ const IssueDetailPage = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isShowAuditLogs, setIsShowAuditLogs] = useState<boolean>(false);
 
+  const formatAction = (action: string) => {
+    switch (action) {
+      case "issue.create":
+        return "Issueを作成しました";
+      case "issue.update":
+        return "Issueを更新しました";
+      case "issue.delete":
+        return "Issueを削除しました";
+      case "issue.resolve":
+        return "Issueを解決しました";
+      case "comment.create":
+        return "コメントを投稿しました";
+      case "comment.delete":
+        return "コメントを削除しました";
+      case "issue.check":
+        return "確認しました";
+      default:
+        return action;
+    }
+  };
+
   const fetchIssue = useCallback(async () => {
     try {
       const token = await getAccessToken();
@@ -139,7 +160,12 @@ const IssueDetailPage = () => {
         });
       }
 
-      setAuditLogs(data.logs ?? []);
+      const formatLogs = data.logs.map((log: AuditLog) => {
+        const action = formatAction(log.action);
+        return { ...log, action };
+      });
+
+      setAuditLogs(formatLogs ?? []);
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "監視ログの取得に失敗しました";
@@ -354,9 +380,6 @@ const IssueDetailPage = () => {
                   <span className="text-sm border px-2 py-1 rounded">
                     {issue.status}
                   </span>
-                  <button className="bg-purple-500 px-3 py-1 rounded text-sm" onClick={() => setIsShowAuditLogs((prev) => !prev)}>
-                    ログ
-                  </button>
                   <button
                     className="bg-yellow-500 text-black px-3 py-1 rounded text-sm"
                     onClick={() => setIsEditing(true)}
@@ -369,6 +392,12 @@ const IssueDetailPage = () => {
                     disabled={isEditing}
                   >
                     削除
+                  </button>
+                  <button
+                    className="bg-purple-500 px-3 py-1 rounded text-sm"
+                    onClick={() => setIsShowAuditLogs((prev) => !prev)}
+                  >
+                    {isShowAuditLogs ? "ログ非表示" : "ログ表示"}
                   </button>
                 </div>
               ) : (
@@ -458,7 +487,7 @@ const IssueDetailPage = () => {
         )}
       </div>
 
-      {(isAdmin && isShowAuditLogs) && (
+      {isAdmin && isShowAuditLogs && (
         <div className="border rounded p-4 flex flex-col gap-3 mt-8">
           <h3 className="font-semibold">監視ログ</h3>
 
