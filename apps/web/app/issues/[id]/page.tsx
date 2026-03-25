@@ -8,6 +8,7 @@ import CommentList from "../components/CommentList";
 import CheckSection from "../components/CheckSection";
 import CommentForm from "../components/CommentForm";
 import { useMe } from "@/app/hooks/useMe";
+import { formatAction } from "@/app/lib/formatAction";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
@@ -35,26 +36,6 @@ const IssueDetailPage = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isShowAuditLogs, setIsShowAuditLogs] = useState<boolean>(false);
 
-  const formatAction = (action: string) => {
-    switch (action) {
-      case "issue.create":
-        return "Issueを作成しました";
-      case "issue.update":
-        return "Issueを更新しました";
-      case "issue.delete":
-        return "Issueを削除しました";
-      case "issue.resolve":
-        return "Issueを解決しました";
-      case "comment.create":
-        return "コメントを投稿しました";
-      case "comment.delete":
-        return "コメントを削除しました";
-      case "issue.check":
-        return "確認しました";
-      default:
-        return action;
-    }
-  };
 
   const fetchIssue = useCallback(async () => {
     try {

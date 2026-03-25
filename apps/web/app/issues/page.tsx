@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { IssueListItem } from "./types";
+import { useMe } from "../hooks/useMe";
 import IssueCard from "./components/IssueCard";
 import IssueForm from "./components/IssueForm";
 import { getAccessToken } from "../lib/api/getAccessToken";
+import Link from "next/link";
 
 const IssuesPage = () => {
+  const { isAdmin } = useMe();
   const [issues, setIssues] = useState<IssueListItem[]>([]);
   const [message, setMessage] = useState<{
     text: string;
@@ -51,14 +54,19 @@ const IssuesPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchIssues();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchIssues();
   }, [fetchIssues]);
 
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold mb-6">Issue Board</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Issue Board</h1>
+          {isAdmin && (
+            <Link className="text-sm border rounded px-3 py-2" href="/admin/audit-logs">監査ログ</Link>
+          )}
+        </div>
 
         {message && (
           <p
