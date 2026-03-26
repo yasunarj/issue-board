@@ -98,3 +98,5 @@ const IssuesPage = () => {
 };
 
 export default IssuesPage;
+
+// 次はsignInページを作成する

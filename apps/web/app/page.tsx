@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
+import Link from "next/link";
 
 const loginSchema = z.object({
   email: z.email("メール形式が正しくありません"),
@@ -154,6 +155,10 @@ const Home = () => {
         )}
 
         <p>{message}</p>
+
+        <Link href="/register" className="text-sm underline">
+          新規登録はこちら
+        </Link>
       </div>
     </main>
   );
