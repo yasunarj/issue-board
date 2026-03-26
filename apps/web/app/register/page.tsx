@@ -8,6 +8,10 @@ import { supabase } from "@/lib/supabase/client";
 
 const RegisterSchema = z
   .object({
+    displayName: z
+      .string()
+      .min(1, "表示名を入力してください")
+      .max(20, "表示名は20文字以内です"),
     email: z.email("正しいメール形式を入力してください"),
     password: z.string().min(6, "パスワードは6文字以上です"),
     passwordConfirm: z.string().min(6, "確認用のパスワードを入力してください"),
@@ -23,6 +27,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [passwordConfirm, setPasswordConfirm] = useState<string>("");
+  const [displayName, setDisplayName] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [message, setMessage] = useState<{
     text: string;
@@ -31,10 +36,10 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleRegister = async () => {
-    setIsLoading(true);
     setMessage(null);
 
     const result = RegisterSchema.safeParse({
+      displayName,
       email,
       password,
       passwordConfirm,
@@ -45,10 +50,17 @@ const RegisterPage = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            display_name: displayName,
+          },
+        },
       });
 
       if (error) {
@@ -60,6 +72,8 @@ const RegisterPage = () => {
         text: "登録が完了しました。確認メールが届いている場合はメールをご確認ください",
         type: "success",
       });
+
+      router.push("/");
     } catch (e) {
       const message = e instanceof Error ? e.message : "登録に失敗しました";
       setMessage({ text: message, type: "error" });
@@ -73,10 +87,18 @@ const RegisterPage = () => {
       <div className="flex flex-col gap-4 w-80">
         <h1>新規登録</h1>
         <input
+          type="text"
+          className="border p-2"
+          placeholder="表示名"
+          onFocus={() => setMessage(null)}
+          onChange={(e) => setDisplayName(e.target.value)}
+        />
+        <input
           type="email"
           className="border p-2"
           placeholder="email"
           value={email}
+          onFocus={() => setMessage(null)}
           onChange={(e) => setEmail(e.target.value)}
         />
         <div className="flex gap-2">
@@ -85,6 +107,7 @@ const RegisterPage = () => {
             className="border p-2 flex-1"
             value={password}
             placeholder="password"
+            onFocus={() => setMessage(null)}
             onChange={(e) => setPassword(e.target.value)}
           />
           <button
@@ -100,6 +123,7 @@ const RegisterPage = () => {
           className="border p-2"
           value={passwordConfirm}
           placeholder="password確認"
+          onFocus={() => setMessage(null)}
           onChange={(e) => setPasswordConfirm(e.target.value)}
         />
         <button
@@ -109,6 +133,11 @@ const RegisterPage = () => {
         >
           {isLoading ? "登録中" : "登録する"}
         </button>
+        <p
+          className={`test-sm ${message?.type === "error" ? "text-red-600" : "text-green-600"}`}
+        >
+          {message?.text}
+        </p>
         <Link href="/" className="text-sm underline">
           ログインページへ
         </Link>
