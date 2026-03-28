@@ -99,4 +99,4 @@ const IssuesPage = () => {
 
 export default IssuesPage;
 
-// 次はsignInページを作成する
+// Issueにコメント数を追加する。apiを書き換えるがjoin + countで必要最低限の処理で取得する方法を覚える
