@@ -16,6 +16,9 @@ const IssuesPage = () => {
     type: "error" | "success";
   } | null>(null);
 
+  const openIssues = issues.filter((issue) => issue.status === "open");
+  const resolvedIssues = issues.filter((issue) => issue.status === "resolved");
+
   const fetchIssues = useCallback(async () => {
     try {
       const token = await getAccessToken();
@@ -64,7 +67,12 @@ const IssuesPage = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Issue Board</h1>
           {isAdmin && (
-            <Link className="text-sm border rounded px-3 py-2" href="/admin/audit-logs">監査ログ</Link>
+            <Link
+              className="text-sm border rounded px-3 py-2"
+              href="/admin/audit-logs"
+            >
+              監査ログ
+            </Link>
           )}
         </div>
 
@@ -79,10 +87,24 @@ const IssuesPage = () => {
         <IssueForm onCreatedIssue={fetchIssues} setMessage={setMessage} />
 
         <div className="flex flex-col gap-4">
-          {issues.length === 0 ? (
-            <p>Issueがありません</p>
+          <h2 className="text-lg font-semibold mt-4">未解決</h2>
+          {openIssues.length === 0 ? (
+            <p>未解決のIssueはありません</p>
           ) : (
-            issues.map((issue) => (
+            openIssues.map((issue) => (
+              <div
+                key={issue.id}
+                className="border rounded p-4 flex flex-col gap-4"
+              >
+                <IssueCard issue={issue} />
+              </div>
+            ))
+          )}
+          <h2 className="text-lg font-semibold mt-8">解決済み</h2>
+          {resolvedIssues.length === 0 ? (
+            <p>解決済みのIssueはありません</p>
+          ) : (
+            resolvedIssues.map((issue) => (
               <div
                 key={issue.id}
                 className="border rounded p-4 flex flex-col gap-4"

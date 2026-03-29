@@ -40,7 +40,8 @@ issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
         id,
         role,
         display_name
-      )
+      ),
+      comment_count:issue_comments(count)
     `)
     .order("created_at", { ascending: false });
 
@@ -48,7 +49,11 @@ issues.get("/", requireRole(["member", "admin", "viewer"]), async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ ok: true, issues: data });
+  const issues = (data ?? []).map((issue) => ({
+    ...issue, comment_count: issue.comment_count?.[0]?.count ?? 0,
+  }))
+
+  return c.json({ ok: true, issues });
 })
 
 issues.post("/", requireRole(["member", "admin"]), async (c) => {
@@ -239,35 +244,46 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
   const id = c.req.param("id");
   const user = c.get("user");
 
+  const { data: current, error: fetchError } = await supabaseAdmin
+    .from("issues")
+    .select("status")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !current) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
+  const newStatus = current.status === "resolved" ? "open" : "resolved";
+
+
   const { data, error } = await supabaseAdmin
     .from("issues")
     .update({
-      status: "resolved",
-      resolved_by: user.id,
-      resolved_at: new Date().toISOString(),
+      status: newStatus,
+      resolved_by: newStatus === "resolved" ? user.id : null,
+      resolved_at: newStatus === "resolved" ? new Date().toISOString() : null,
     })
     .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.log("エラーの詳細", error);
     return c.json({ error: error.message }, 500);
   }
 
   await createAuditLog({
     userId: user.id,
-    action: "issue.resolve",
+    action: newStatus === "resolved" ? "issue.resolve" : "issue.reopen",
     targetType: "issue",
     targetId: data.id,
     issueId: data.id,
     detail: {
-      resolved_by: data.resolved_by,
-      resolved_at: data.resolved_at,
+      status: newStatus,
     }
   })
 
-  return c.json({ message: "Issue resolved", issue: data })
+  return c.json({ message: "Issue updated", issue: data })
 });
 
 issues.get("/:id/comments", requireRole(["admin", "member", "viewer"]), async (c) => {

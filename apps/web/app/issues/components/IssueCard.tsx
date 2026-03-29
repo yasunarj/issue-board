@@ -12,7 +12,7 @@ const IssueCard = ({
   return (
     <>
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           <h2 className="font-bold">{issue.title}</h2>
           <div className="flex items-center gap-2">
             <Link
@@ -27,6 +27,11 @@ const IssueCard = ({
             </span>
           </div>
         </div>
+
+        <div className="text-sm text-gray-500 mb-2">
+          コメント: {issue.comment_count ?? 0}件
+        </div>
+
 
         <div className="text-xs text-gray-600 flex flex-col gap-1">
           <span>

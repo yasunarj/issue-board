@@ -12,6 +12,7 @@ export type IssueListItem = {
   created_at: string;
   created_by: string;
   created_by_profile: ProfileRef | null;
+  comment_count: number
 }
 
 export type IssueDetail = {

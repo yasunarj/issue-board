@@ -13,7 +13,8 @@ import { formatAction } from "@/app/lib/formatAction";
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
-  const { isAdmin } = useMe();
+  const { me, isAdmin } = useMe();
+  const canResolve = me?.role === "admin" || me?.role === "member";
   const router = useRouter();
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [message, setMessage] = useState<{
@@ -35,7 +36,6 @@ const IssueDetailPage = () => {
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isShowAuditLogs, setIsShowAuditLogs] = useState<boolean>(false);
-
 
   const fetchIssue = useCallback(async () => {
     try {
@@ -328,6 +328,52 @@ const IssueDetailPage = () => {
     }
   };
 
+  const handleResolvedIssue = async () => {
+    try {
+      const token = await getAccessToken();
+
+      const res = await fetch(
+        `http://localhost:8787/issues/${issueId}/resolve`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "ステータスの更新に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      setMessage({
+        text:
+          data.issue.status === "resolved"
+            ? "Issueを解決しました"
+            : "Issueを未解決に戻しました",
+        type: "success",
+      });
+
+      await fetchIssue();
+
+      if (isAdmin) {
+        await fetchAuditLogs();
+      }
+    } catch (e) {
+      setMessage({
+        text:
+          e instanceof Error ? e.message : "ステータスを更新できませんでした",
+        type: "error",
+      });
+    }
+  };
+
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl flex flex-col gap-6">
@@ -361,6 +407,15 @@ const IssueDetailPage = () => {
                   <span className="text-sm border px-2 py-1 rounded">
                     {issue.status}
                   </span>
+
+                  {canResolve && (
+                    <button
+                      className="text-sm border px-2 py-1 rounded"
+                      onClick={handleResolvedIssue}
+                    >
+                      {issue.status === "open" ? "解決" : "未解決に戻す"}
+                    </button>
+                  )}
                   <button
                     className="bg-yellow-500 text-black px-3 py-1 rounded text-sm"
                     onClick={() => setIsEditing(true)}
@@ -497,5 +552,3 @@ const IssueDetailPage = () => {
 };
 
 export default IssueDetailPage;
-
-// 更新と削除は完了すみ。次に管理者のみcheckした人物を特定できるように修正する。
