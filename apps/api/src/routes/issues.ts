@@ -5,6 +5,7 @@ import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import type { AppEnv } from "..";
 import { createAuditLog } from "../lib/auditLog";
+import { sendMail } from "../lib/sendMain";
 
 const issues = new Hono<AppEnv>();
 
@@ -67,6 +68,12 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
   const user = c.get("user");
   const { title, description, dueDate } = result.data;
 
+  const { data: profile } = await supabaseAdmin
+  .from("profiles")
+  .select("display_name")
+  .eq("id", user.id)
+  .single()
+
   const { data, error } = await supabaseAdmin
     .from("issues")
     .insert({
@@ -93,6 +100,22 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
       due_date: data.due_date,
     },
   });
+
+  try {
+    await sendMail({
+      subject: `[Issue Board] 新しいIssueが作成されました`,
+      text: `
+      新しいIssueが作成されました
+  
+      タイトル: ${data.title}
+      期限: ${data.due_date ?? "なし"}
+      内容： ${data.description}
+      作成者: ${profile?.display_name ?? "不明"}
+      `.trim(),
+    })
+  } catch (mailError) {
+    console.error("メール送信失敗", mailError)
+  }
 
   return c.json(
     {
@@ -246,7 +269,7 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
 
   const { data: current, error: fetchError } = await supabaseAdmin
     .from("issues")
-    .select("status")
+    .select("status, title")
     .eq("id", id)
     .single();
 
@@ -254,8 +277,13 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
     return c.json({ error: "Issue not found" }, 404);
   }
 
-  const newStatus = current.status === "resolved" ? "open" : "resolved";
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .single();
 
+  const newStatus = current.status === "resolved" ? "open" : "resolved";
 
   const { data, error } = await supabaseAdmin
     .from("issues")
@@ -272,6 +300,7 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
+
   await createAuditLog({
     userId: user.id,
     action: newStatus === "resolved" ? "issue.resolve" : "issue.reopen",
@@ -282,6 +311,24 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
       status: newStatus,
     }
   })
+
+  try {
+    await sendMail({
+      subject: newStatus === "resolved"
+        ? "【Issue Board】Issueが解決されました"
+        : "【Issue Board】Issueが未解決に戻されました",
+      text: `
+      Issueのステータスが変更されました
+  
+      タイトル: ${data.title ?? ""}
+      実行者: ${profile?.display_name ?? "不明"}
+      新しいステータス: ${newStatus}
+      Issue ID: ${data.id}
+      `.trim(),
+    })
+  } catch (mailError) {
+    console.error("メール送信失敗", mailError)
+  }
 
   return c.json({ message: "Issue updated", issue: data })
 });
