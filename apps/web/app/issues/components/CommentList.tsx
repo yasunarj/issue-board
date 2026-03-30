@@ -2,7 +2,7 @@
 import { Dispatch, SetStateAction, useState } from "react";
 import type { IssueComment } from "../types";
 import { useMe } from "@/app/hooks/useMe";
-import { getAccessToken } from "@/app/lib/api/getAccessToken";
+import { apiFetch } from "@/app/lib/api/client";
 
 type CommentListProps = {
   comments: IssueComment[];
@@ -20,17 +20,9 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
     if (!confirm("本当に削除しても良いですか？")) return;
     setDeletingId(commentId);
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(
-        `http://localhost:8787/issues/${issueId}/comments/${commentId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const res = await apiFetch(`/issues/${issueId}/comments/${commentId}`, {
+        method: "DELETE",
+      });
 
       const data = await res.json();
 

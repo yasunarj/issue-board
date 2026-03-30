@@ -2,13 +2,13 @@
 import { useParams, useRouter } from "next/navigation";
 import type { IssueDetail, IssueCheck, IssueComment, AuditLog } from "../types";
 import { useCallback, useEffect, useState } from "react";
-import { getAccessToken } from "@/app/lib/api/getAccessToken";
 import Link from "next/link";
 import CommentList from "../components/CommentList";
 import CheckSection from "../components/CheckSection";
 import CommentForm from "../components/CommentForm";
 import { useMe } from "@/app/hooks/useMe";
 import { formatAction } from "@/app/lib/formatAction";
+import { apiFetch } from "@/app/lib/api/client";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
@@ -39,11 +39,7 @@ const IssueDetailPage = () => {
 
   const fetchIssue = useCallback(async () => {
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(`http://localhost:8787/issues/${issueId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`/issues/${issueId}`);
 
       const data = await res.json();
 
@@ -66,16 +62,7 @@ const IssueDetailPage = () => {
 
   const fetchComments = useCallback(async () => {
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(
-        `http://localhost:8787/issues/${issueId}/comments`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const res = await apiFetch(`/issues/${issueId}/comments`);
 
       const data = await res.json();
 
@@ -93,16 +80,7 @@ const IssueDetailPage = () => {
 
   const fetchChecks = useCallback(async () => {
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(
-        `http://localhost:8787/issues/${issueId}/checks`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const res = await apiFetch(`/issues/${issueId}/checks`);
 
       const data = await res.json();
 
@@ -122,15 +100,7 @@ const IssueDetailPage = () => {
     if (!isAdmin) return;
 
     try {
-      const token = await getAccessToken();
-      const res = await fetch(
-        `http://localhost:8787/issues/${issueId}/audit-logs`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const res = await apiFetch(`/issues/${issueId}/audit-logs`);
 
       const data = await res.json();
 
@@ -190,19 +160,13 @@ const IssueDetailPage = () => {
     setCommentSubmitting(true);
 
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(
-        `http://localhost:8787/issues/${issueId}/comments`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ comment }),
+      const res = await apiFetch(`/issues/${issueId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ comment }),
+      });
 
       const data = await res.json();
 
@@ -227,13 +191,8 @@ const IssueDetailPage = () => {
 
   const handleCheckIssue = async () => {
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(`http://localhost:8787/issues/${issueId}/check`, {
+      const res = await apiFetch(`/issues/${issueId}/check`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       const data = await res.json();
@@ -258,12 +217,8 @@ const IssueDetailPage = () => {
     if (!confirm("本当に削除してよろしいですか？")) return;
 
     try {
-      const token = await getAccessToken();
-      const res = await fetch(`http://localhost:8787/issues/${issueId}`, {
+      const res = await apiFetch(`/issues/${issueId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       const data = await res.json();
@@ -289,13 +244,10 @@ const IssueDetailPage = () => {
     setIsUpdating(true);
 
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(`http://localhost:8787/issues/${issueId}`, {
+      const res = await apiFetch(`/issues/${issueId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: editTitle,
@@ -330,17 +282,9 @@ const IssueDetailPage = () => {
 
   const handleResolvedIssue = async () => {
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch(
-        `http://localhost:8787/issues/${issueId}/resolve`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const res = await apiFetch(`/issues/${issueId}/resolve`, {
+        method: "PATCH",
+      });
 
       const data = await res.json();
 

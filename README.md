@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Web Environment Variables
+
+The web app expects the following value in `apps/web/.env.local`.
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
+```
+
 ## Getting Started
 
 First, run the development server:

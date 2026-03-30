@@ -1,7 +1,7 @@
 "use client";
 
-import { supabase } from "@/lib/supabase/client";
 import {  Dispatch, SetStateAction, useState } from "react";
+import { apiFetch } from "@/app/lib/api/client";
 
 type IssueForm = {
   onCreatedIssue: () => Promise<void>;
@@ -24,19 +24,10 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
     setIsSubmitting(true);
   
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-  
-      if (!token) {
-        setMessage({ text: "ログインしてください", type: "error" });
-        return;
-      }
-  
-      const res = await fetch("http://localhost:8787/issues", {
+      const res = await apiFetch("/issues", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title,
@@ -101,5 +92,4 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
 };
 
 export default IssueForm;
-
 

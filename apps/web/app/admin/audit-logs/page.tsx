@@ -1,10 +1,10 @@
 "use client";
 
 import type { AuditLog } from "@/app/issues/types";
-import { getAccessToken } from "@/app/lib/api/getAccessToken";
 import { useCallback, useEffect, useState } from "react";
 import { formatAction } from "@/app/lib/formatAction";
 import Link from "next/link";
+import { apiFetch } from "@/app/lib/api/client";
 
 const AuditLogPage = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -17,12 +17,7 @@ const AuditLogPage = () => {
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = await getAccessToken();
-      const res = await fetch("http://localhost:8787/audit-logs", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch("/audit-logs");
 
       const data = await res.json();
 

@@ -5,8 +5,8 @@ import type { IssueListItem } from "./types";
 import { useMe } from "../hooks/useMe";
 import IssueCard from "./components/IssueCard";
 import IssueForm from "./components/IssueForm";
-import { getAccessToken } from "../lib/api/getAccessToken";
 import Link from "next/link";
+import { apiFetch } from "../lib/api/client";
 
 const IssuesPage = () => {
   const { isAdmin } = useMe();
@@ -21,13 +21,7 @@ const IssuesPage = () => {
 
   const fetchIssues = useCallback(async () => {
     try {
-      const token = await getAccessToken();
-
-      const res = await fetch("http://localhost:8787/issues", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch("/issues");
 
       const data = await res.json();
 

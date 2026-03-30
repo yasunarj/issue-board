@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 import Link from "next/link";
+import { apiFetch } from "./lib/api/client";
 
 const loginSchema = z.object({
   email: z.email("メール形式が正しくありません"),
@@ -28,18 +29,12 @@ const Home = () => {
 
   const init = useCallback(async () => {
     const { data: session } = await supabase.auth.getSession();
-
-    const token = session.session?.access_token;
-    if (!token) {
+    if (!session.session?.access_token) {
       setMe(null);
       return null;
     }
 
-    const res = await fetch("http://localhost:8787/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await apiFetch("/me");
 
     if (!res.ok) {
       setMe(null);
