@@ -1,6 +1,6 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
-import type { IssueDetail, IssueCheck, IssueComment, AuditLog } from "../types";
+import { useParams } from "next/navigation";
+import type { AuditLog } from "../types";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import CommentList from "../components/CommentList";
@@ -9,24 +9,17 @@ import CommentForm from "../components/CommentForm";
 import { useMe } from "@/app/hooks/useMe";
 import { formatAction } from "@/app/lib/formatAction";
 import { apiFetch } from "@/app/lib/api/client";
+import { useIssueDetail } from "../hooks/useIssueDetail";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
   const { me, isAdmin } = useMe();
   const canResolve = me?.role === "admin" || me?.role === "member";
-  const router = useRouter();
-  const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
   } | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [comments, setComments] = useState<IssueComment[]>([]);
-  const [commentInputs, setCommentInputs] = useState<string>("");
-  const [commentSubmitting, setCommentSubmitting] = useState<boolean>(false);
-  const [checks, setChecks] = useState<IssueCheck[]>([]);
-  const [checkMessage, setCheckMessage] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>("");
@@ -36,65 +29,6 @@ const IssueDetailPage = () => {
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isShowAuditLogs, setIsShowAuditLogs] = useState<boolean>(false);
-
-  const fetchIssue = useCallback(async () => {
-    try {
-      const res = await apiFetch(`/issues/${issueId}`);
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({
-          text: data.error ?? "Issueの取得に失敗しました",
-          type: "error",
-        });
-        return;
-      }
-
-      setIssue(data.issue ?? null);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "不明なエラー";
-      setMessage({ text: message, type: "error" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [issueId]);
-
-  const fetchComments = useCallback(async () => {
-    try {
-      const res = await apiFetch(`/issues/${issueId}/comments`);
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({ text: "コメントの取得に失敗しました", type: "error" });
-        return;
-      }
-
-      setComments(data.comments ?? []);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "不明なエラー";
-      setMessage({ text: message, type: "error" });
-    }
-  }, [issueId]);
-
-  const fetchChecks = useCallback(async () => {
-    try {
-      const res = await apiFetch(`/issues/${issueId}/checks`);
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({ text: "確認状況の取得に失敗しました", type: "error" });
-        return;
-      }
-
-      setChecks(data.checks ?? []);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "不明なエラー";
-      setMessage({ text: message, type: "error" });
-    }
-  }, [issueId]);
 
   const fetchAuditLogs = useCallback(async () => {
     if (!isAdmin) return;
@@ -124,23 +58,34 @@ const IssueDetailPage = () => {
     }
   }, [isAdmin, issueId]);
 
+  const {
+    issue,
+    isLoading,
+    comments,
+    commentInput,
+    setCommentInput,
+    commentSubmitting,
+    checks,
+    checkMessage,
+    fetchIssue,
+    fetchComments,
+    handleCreateComment,
+    handleCheckIssue,
+    handleDeleteIssue,
+    handleResolvedIssue,
+  } = useIssueDetail({
+    issueId,
+    isAdmin,
+    setMessage,
+    onResolved: fetchAuditLogs,
+  });
+
   useEffect(() => {
     if (!issueId) return;
-    fetchIssue();
-    fetchComments();
-    fetchChecks();
-
     if (isAdmin) {
       fetchAuditLogs();
     }
-  }, [
-    fetchIssue,
-    fetchComments,
-    fetchChecks,
-    issueId,
-    fetchAuditLogs,
-    isAdmin,
-  ]);
+  }, [fetchAuditLogs, isAdmin, issueId]);
 
   useEffect(() => {
     if (!issue) return;
@@ -149,96 +94,6 @@ const IssueDetailPage = () => {
     setEditDescription(issue.description);
     setEditDueDate(issue.due_date ?? "");
   }, [issue]);
-
-  const handleCreateComment = async () => {
-    const comment = commentInputs.trim();
-    if (!comment) {
-      setMessage({ text: "コメントを入力してください", type: "error" });
-      return;
-    }
-
-    setCommentSubmitting(true);
-
-    try {
-      const res = await apiFetch(`/issues/${issueId}/comments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ comment }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({
-          text: data.error ?? "コメントの投稿に失敗しました",
-          type: "error",
-        });
-        return;
-      }
-
-      setCommentInputs("");
-      setMessage({ text: "コメントを投稿しました", type: "success" });
-      await fetchComments();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "不明なエラー";
-      setMessage({ text: message, type: "error" });
-    } finally {
-      setCommentSubmitting(false);
-    }
-  };
-
-  const handleCheckIssue = async () => {
-    try {
-      const res = await apiFetch(`/issues/${issueId}/check`, {
-        method: "POST",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({
-          text: data.error ?? "確認登録に失敗しました",
-          type: "error",
-        });
-        return;
-      }
-
-      await fetchChecks();
-      setCheckMessage(data.alreadyChecked ? "既に確認済です" : "確認しました");
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "不明なエラー";
-      setMessage({ text: message, type: "error" });
-    }
-  };
-
-  const handleDeleteIssue = async () => {
-    if (!confirm("本当に削除してよろしいですか？")) return;
-
-    try {
-      const res = await apiFetch(`/issues/${issueId}`, {
-        method: "DELETE",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({
-          text: data.error ?? "削除に失敗しました",
-          type: "error",
-        });
-        return;
-      }
-
-      router.push("/issues");
-    } catch (e) {
-      setMessage({
-        text: e instanceof Error ? e.message : "削除中にエラーが発生しまいした",
-        type: "error",
-      });
-    }
-  };
 
   const handleUpdateIssue = async () => {
     setIsUpdating(true);
@@ -280,44 +135,6 @@ const IssueDetailPage = () => {
     }
   };
 
-  const handleResolvedIssue = async () => {
-    try {
-      const res = await apiFetch(`/issues/${issueId}/resolve`, {
-        method: "PATCH",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage({
-          text: data.error ?? "ステータスの更新に失敗しました",
-          type: "error",
-        });
-        return;
-      }
-
-      setMessage({
-        text:
-          data.issue.status === "resolved"
-            ? "Issueを解決しました"
-            : "Issueを未解決に戻しました",
-        type: "success",
-      });
-
-      await fetchIssue();
-
-      if (isAdmin) {
-        await fetchAuditLogs();
-      }
-    } catch (e) {
-      setMessage({
-        text:
-          e instanceof Error ? e.message : "ステータスを更新できませんでした",
-        type: "error",
-      });
-    }
-  };
-
   return (
     <main className="min-h-screen p-6">
       <div className="mx-auto max-w-3xl flex flex-col gap-6">
@@ -346,7 +163,7 @@ const IssueDetailPage = () => {
           <div className="border rounded p-4 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-bold">{issue.title}</h2>
-              {isAdmin ? (
+              {canResolve ? (
                 <div className="flex justify-end gap-2">
                   <span className="text-sm border px-2 py-1 rounded">
                     {issue.status}
@@ -360,25 +177,29 @@ const IssueDetailPage = () => {
                       {issue.status === "open" ? "解決" : "未解決に戻す"}
                     </button>
                   )}
-                  <button
-                    className="bg-yellow-500 text-black px-3 py-1 rounded text-sm"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    編集
-                  </button>
-                  <button
-                    className="bg-red-600 text-white px-3 py-1 rounded text-xs disabled:hidden"
-                    onClick={handleDeleteIssue}
-                    disabled={isEditing}
-                  >
-                    削除
-                  </button>
-                  <button
-                    className="bg-purple-500 px-3 py-1 rounded text-sm"
-                    onClick={() => setIsShowAuditLogs((prev) => !prev)}
-                  >
-                    {isShowAuditLogs ? "ログ非表示" : "ログ表示"}
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button
+                        className="bg-yellow-500 text-black px-3 py-1 rounded text-sm"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        編集
+                      </button>
+                      <button
+                        className="bg-red-600 text-white px-3 py-1 rounded text-xs disabled:hidden"
+                        onClick={handleDeleteIssue}
+                        disabled={isEditing}
+                      >
+                        削除
+                      </button>
+                      <button
+                        className="bg-purple-500 px-3 py-1 rounded text-sm"
+                        onClick={() => setIsShowAuditLogs((prev) => !prev)}
+                      >
+                        {isShowAuditLogs ? "ログ非表示" : "ログ表示"}
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <span className="text-sm border px-2 py-1 rounded">
@@ -457,8 +278,8 @@ const IssueDetailPage = () => {
             />
             <CommentForm
               issueId={issueId}
-              value={commentInputs}
-              onChange={(e) => setCommentInputs(e)}
+              value={commentInput}
+              onChange={(e) => setCommentInput(e)}
               onSubmitting={handleCreateComment}
               isSubmitting={commentSubmitting}
             />
