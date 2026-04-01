@@ -1,6 +1,6 @@
 import { MiddlewareHandler } from "hono";
 import { Context, Next } from "hono";
-import type { AppEnv, Role } from "..";
+import type { AppEnv, Role } from "../app";
 
 export const requireRole = (roles: Role[]): MiddlewareHandler<AppEnv> => {
   return async (c: Context, next: Next) => {

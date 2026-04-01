@@ -3,7 +3,7 @@ import { z } from "zod";
 import { supabaseAdmin } from "../lib/supabase";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
-import type { AppEnv } from "..";
+import type { AppEnv } from "../app";
 import { createAuditLog } from "../lib/auditLog";
 import { sendMail } from "../lib/sendMain";
 
@@ -625,4 +625,3 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
 });
 
 export default issues;
-

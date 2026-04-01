@@ -1,7 +1,7 @@
 import { MiddlewareHandler } from "hono";
 import { supabaseAdmin } from "../lib/supabase";
 import { Context, Next } from "hono";
-import type { AppEnv, Role } from "..";
+import type { AppEnv, Role } from "../app";
 
 export const authMiddleware: MiddlewareHandler<AppEnv> = async (c: Context, next: Next) => {
   if (c.req.method === "OPTIONS") return await next();

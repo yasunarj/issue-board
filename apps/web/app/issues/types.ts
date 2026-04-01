@@ -1,19 +1,19 @@
 export type ProfileRef = {
   id: string;
   role: "admin" | "member" | "viewer";
-  display_name: string | null;
+  display_name?: string | null;
 };
 
 export type IssueListItem = {
   id: string;
   title: string;
   status: "open" | "resolved";
-  due_date: string;
+  due_date: string | null;
   created_at: string;
   created_by: string;
   created_by_profile: ProfileRef | null;
-  comment_count: number
-}
+  comment_count: number;
+};
 
 export type IssueDetail = {
   id: string;
@@ -43,25 +43,32 @@ export type IssueCheck = {
   id: string;
   issue_id: string;
   user_id: string;
-  create_at: string;
-  user_profile: ProfileRef
-}
+  checked_at: string;
+  user_profile: ProfileRef | null;
+};
 
 export type Me = {
   id: string;
-  email: string | null
+  email: string | null;
   role: "admin" | "member" | "viewer";
   displayName: string | null;
-}
+};
+
+export type ApiMeResponse = {
+  userId: string;
+  email: string | null;
+  role: "admin" | "member" | "viewer";
+  displayName: string | null;
+};
 
 export type AuditLog = {
   id: string;
-  user_id: string;
+  user_id?: string | null;
   action: string;
   target_type: string;
-  target_id: string;
-  issue_id: string;
+  target_id?: string | null;
+  issue_id?: string | null;
   detail: Record<string, unknown>;
   created_at: string;
   user_profile: ProfileRef | null;
-}
+};

@@ -6,13 +6,13 @@ import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 import Link from "next/link";
 import { apiFetch } from "./lib/api/client";
+import { mapMeResponse } from "./lib/api/getMe";
+import type { ApiMeResponse, Me } from "./issues/types";
 
 const loginSchema = z.object({
   email: z.email("メール形式が正しくありません"),
   password: z.string().min(6, "パスワードは6文字以上です"),
 });
-
-type Profile = { role: "admin" | "member" | "viewer" };
 
 const Home = () => {
   const router = useRouter();
@@ -21,11 +21,7 @@ const Home = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [me, setMe] = useState<{
-    id: string;
-    email: string | null;
-    role: Profile["role"];
-  } | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
 
   const init = useCallback(async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -41,13 +37,9 @@ const Home = () => {
       return null;
     }
 
-    const data = await res.json();
+    const data: ApiMeResponse = await res.json();
 
-    setMe({
-      id: data.userId,
-      email: data.email,
-      role: data.role,
-    });
+    setMe(mapMeResponse(data));
 
     return data.role;
   }, []);
