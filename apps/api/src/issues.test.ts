@@ -8,6 +8,27 @@ vi.mock("./lib/supabase", () => {
   }
 })
 
+vi.mock("./middleware/auth", () => {
+  return {
+    authMiddleware: async (c: any, next: () => Promise<void>) => {
+      const role = c.req.header("x-test-role");
+
+      if (!role) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      c.set("user", {
+        id: "user-1",
+        email: "test@example.com",
+      });
+
+      c.set("role", role);
+
+      await next();
+    }
+  }
+})
+
 describe("app", () => {
   it("GET /health で ok: false を返す", async () => {
     const { createApp } = await import("./app");
@@ -28,6 +49,42 @@ describe("app", () => {
     const res = await app.fetch(new Request("http://localhost/issues"));
 
     expect(res.status).toBe(401);
+  });
+
+  it("viewer は issue を作成できない", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "viewer",
+      },
+      body: JSON.stringify({
+        title: "test",
+        description: "test",
+      })
+    }))
+    expect(res.status).toBe(403);
+  })
+
+  it("空コメントは 400 を返す", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "member",
+      },
+      body: JSON.stringify({
+        comment: "   ",
+      })
+    }))
+
+    expect(res.status).toBe(400);
   })
 })
 
