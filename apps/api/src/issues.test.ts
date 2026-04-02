@@ -1,6 +1,4 @@
-
 import { describe, it, expect, vi } from "vitest";
-import { createApp } from "./app";
 
 vi.mock("./lib/supabase", () => {
   return {
@@ -25,6 +23,28 @@ vi.mock("./middleware/auth", () => {
       c.set("role", role);
 
       await next();
+    }
+  }
+})
+
+vi.mock("./lib/auditLog", () => {
+  return {
+    createAuditLog: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("./lib/sendMail", () => {
+  return {
+    sendMail: vi.fn().mockResolvedValue(undefined),
+  }
+})
+
+const fromMock = vi.fn(); //まだ中身のない関数 mockImplementationで中身を追加する
+
+vi.mock("./lib/supabase", () => {
+  return {
+    supabaseAdmin: {
+      from: fromMock,
     }
   }
 })
@@ -85,8 +105,143 @@ describe("app", () => {
     }))
 
     expect(res.status).toBe(400);
-  })
+
+    const body = await res.json();
+    expect(body).toEqual({
+      error: "comment is required",
+    })
+  });
+
+  it("open → resolved にトグルされる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { status: "open" },
+                error: null,
+              })
+            })
+          }),
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: {
+                    id: "issue-1",
+                    title: "Test Issue",
+                    status: "resolved",
+                  },
+                  error: null,
+                })
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: {
+                  display_name: "Test User",
+                },
+                error: null,
+              })
+            })
+          })
+        }
+      }
+
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(
+      new Request("http://localhost/issues/issue-1/resolve", {
+        method: "PATCH",
+        headers: {
+          "x-test-role": "member",
+        },
+      })
+    );
+
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as any;
+    expect(body.issue.status).toBe("resolved");
+  });
+
+  it("resolved -> open にトグルされる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { status: "resolved" },
+              })
+            })
+          }),
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: {
+                    id: "issue-1",
+                    status: "open",
+                  },
+                  error: null,
+                })
+              })
+            })
+          })
+        }
+      }
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: {
+                  display_name: "Test User",
+                },
+                error: null,
+              })
+            })
+          })
+        }
+      }
+
+      return {};
+    })
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/resolve", {
+      method: "PATCH",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as any;
+
+    expect(body.issue.status).toBe("open");
+  });
+
 })
+
+
+
+
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -300,7 +300,6 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-
   await createAuditLog({
     userId: user.id,
     action: newStatus === "resolved" ? "issue.resolve" : "issue.reopen",
@@ -330,7 +329,7 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
     console.error("メール送信失敗", mailError)
   }
 
-  return c.json({ message: "Issue updated", issue: data })
+  return c.json({ message: "Issue updated", issue: data }, 200);
 });
 
 issues.get("/:id/comments", requireRole(["admin", "member", "viewer"]), async (c) => {
