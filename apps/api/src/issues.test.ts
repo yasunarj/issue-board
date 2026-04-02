@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 
 vi.mock("./lib/supabase", () => {
   return {
@@ -33,9 +33,11 @@ vi.mock("./lib/auditLog", () => {
   };
 });
 
+const sendMailMock = vi.fn().mockRejectedValue(undefined);
+
 vi.mock("./lib/sendMail", () => {
   return {
-    sendMail: vi.fn().mockResolvedValue(undefined),
+    sendMail: sendMailMock,
   }
 })
 
@@ -48,6 +50,12 @@ vi.mock("./lib/supabase", () => {
     }
   }
 })
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  fromMock.mockReset();
+  sendMailMock.mockResolvedValue(undefined);
+});
 
 describe("app", () => {
   it("GET /health で ok: false を返す", async () => {
@@ -238,7 +246,7 @@ describe("app", () => {
   });
 
 })
-
+// テストを進める前にbeforeEachについて調べてみる
 
 
 

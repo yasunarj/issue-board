@@ -5,7 +5,7 @@ import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import type { AppEnv } from "../app";
 import { createAuditLog } from "../lib/auditLog";
-import { sendMail } from "../lib/sendMain";
+import { sendMail } from "../lib/sendMail";
 
 const issues = new Hono<AppEnv>();
 
@@ -69,10 +69,10 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
   const { title, description, dueDate } = result.data;
 
   const { data: profile } = await supabaseAdmin
-  .from("profiles")
-  .select("display_name")
-  .eq("id", user.id)
-  .single()
+    .from("profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .single()
 
   const { data, error } = await supabaseAdmin
     .from("issues")
