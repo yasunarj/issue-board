@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
+import { createAuditLog } from "./lib/auditLog";
 
 vi.mock("./middleware/auth", () => {
   return {
@@ -177,6 +178,10 @@ describe("app", () => {
 
     const body = await res.json() as any;
     expect(body.issue.status).toBe("resolved");
+
+    expect(createAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: "issue.resolve"
+    }));
   });
 
   it("resolved -> open にトグルされる", async () => {
@@ -237,6 +242,9 @@ describe("app", () => {
     const body = await res.json() as any;
 
     expect(body.issue.status).toBe("open");
+    expect(createAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: "issue.reopen"
+    }));
   });
 
   it("issue が見つからない時 404 を返す", async () => {
@@ -398,9 +406,14 @@ describe("app", () => {
     const body = await res.json();
 
     expect(body).toEqual({ message: "Issue deleted" });
+    expect(createAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: "issue.delete",
+    }))
   })
 })
 
+テストにてcreateAuditLogが呼ばれているか、呼ばれるときの引き数のactionがそれぞれあっているのかを確認。
+終わったので次にいきましょう
 
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
