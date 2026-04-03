@@ -245,9 +245,109 @@ describe("app", () => {
     expect(body.issue.status).toBe("open");
   });
 
-})
-// テストを進める前にbeforeEachについて調べてみる
+  it("issue が見つからない時 404 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    })
 
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-999/resolve", {
+      method: "PATCH",
+      headers: {
+        "x-test-role": "member",
+      },
+    })
+    );
+
+    expect(res.status).toBe(404);
+
+    const body = await res.json();
+
+    expect(body).toEqual({
+      error: "Issue not found",
+    })
+  });
+
+  it("update に失敗すると 500 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: {
+                  status: "open",
+                  title: "Test Title",
+                },
+                error: null
+              }),
+            }),
+          }),
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: null,
+                  error: {
+                    message: "DB update failed",
+                  }
+                })
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: {
+                  display_name: "Test User",
+                },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+
+      return {};
+    });
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/resolve", {
+      method: "PATCH",
+      headers: {
+        "x-test-role": "member",
+      },
+    })
+    );
+
+    expect(res.status).toBe(500);
+
+    const body = await res.json();
+
+    expect(body).toEqual({ error: "DB update failed" })
+  })
+})
 
 
 
