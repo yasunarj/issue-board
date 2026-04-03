@@ -1,11 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
-vi.mock("./lib/supabase", () => {
-  return {
-    supabaseAdmin: {},
-  }
-})
-
 vi.mock("./middleware/auth", () => {
   return {
     authMiddleware: async (c: any, next: () => Promise<void>) => {
@@ -58,7 +52,7 @@ beforeEach(() => {
 });
 
 describe("app", () => {
-  it("GET /health で ok: false を返す", async () => {
+  it("GET /health で ok: true を返す", async () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
@@ -346,6 +340,64 @@ describe("app", () => {
     const body = await res.json();
 
     expect(body).toEqual({ error: "DB update failed" })
+  })
+
+  it("viewer は issue を削除できない", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "viewer",
+      }
+    })
+    )
+
+    expect(res.status).toBe(403);
+  })
+
+  it("admin は issue を削除できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: {
+                  id: "issue-1",
+                  title: "Test Title",
+                },
+                error: null,
+              })
+            })
+          }),
+          delete: () => ({
+            eq: async () => ({
+              error: null,
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }));
+
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+
+    expect(body).toEqual({ message: "Issue deleted" });
   })
 })
 

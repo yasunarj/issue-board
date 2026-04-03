@@ -203,7 +203,7 @@ issues.delete("/:id", requireRole(["admin"]), async (c) => {
 
   return c.json({
     message: "Issue deleted",
-  })
+  }, 200)
 });
 
 issues.patch("/:id", requireRole(["admin"]), async (c) => {
