@@ -598,11 +598,97 @@ describe("app", () => {
     );
   })
 
-  it("update対象の issue が見つからない時 404 を返し auditLog は呼ばれない"); 
+  it("update対象の issue が見つからない時 404 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "Issue not found" }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
 
-  it("updateに失敗すると 500 を返し auditLog は呼ばれない")
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({
+        title: "Updated title",
+        description: "Updated description",
+        dueDate: "2026-04-05",
+      })
+    }));
+
+    expect(res.status).toBe(404);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Issue not found");
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  });
+
+  it("updateに失敗すると 500 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null,
+              })
+            })
+          }),
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: null,
+                  error: { message: "DB update failed" },
+                })
+              })
+            })
+          })
+        }
+      }
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({
+        title: "Updated title",
+        description: "Updated description",
+        dueDate: "2026-04-05",
+      })
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to update issue");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
 })
-// updateをテスト中、あと２つ追加して次にすすむ、const {createApp} = await import("./app")のawaitもわからないので質問する
+
+// updateのテスト完了次へ進む
 
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
