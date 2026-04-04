@@ -260,7 +260,7 @@ issues.patch("/:id", requireRole(["admin"]), async (c) => {
   return c.json({
     message: "Issue updated",
     issue: data,
-  })
+  }, 200);
 })
 
 issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {

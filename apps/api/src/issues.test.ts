@@ -347,7 +347,9 @@ describe("app", () => {
 
     const body = await res.json();
 
-    expect(body).toEqual({ error: "DB update failed" })
+    expect(body).toEqual({ error: "DB update failed" });
+
+    expect(createAuditLog).not.toHaveBeenCalled();
   })
 
   it("viewer は issue を削除できない", async () => {
@@ -363,6 +365,11 @@ describe("app", () => {
     )
 
     expect(res.status).toBe(403);
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe("Forbidden");
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(createAuditLog).not.toHaveBeenCalled();
   })
 
   it("admin は issue を削除できる", async () => {
@@ -410,10 +417,192 @@ describe("app", () => {
       action: "issue.delete",
     }))
   })
-})
 
-テストにてcreateAuditLogが呼ばれているか、呼ばれるときの引き数のactionがそれぞれあっているのかを確認。
-終わったので次にいきましょう
+  it("delete に失敗すると 500 を返し auditLog が呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: {
+                  id: "issue-1",
+                  title: "Test Title"
+                }
+              })
+            })
+          }),
+          delete: () => ({
+            eq: async () => ({
+              error: {
+                message: "DB delete failed",
+              }
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to delete issue");
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("delete対象の issue が見つからない時 404 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "Issue not found" }
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { error: string }
+
+    expect(body.error).toBe("Issue not found");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("admin 以外は issue を削除できず 403 を返し auditLog は呼ばれない", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(403);
+
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Forbidden");
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("admin 以外は issue を更新できず 403 を返し auditLog は呼ばれない", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "PATCH",
+      headers: {
+        "x-test-role": "member",
+      }
+    }));
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Forbidden");
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("admin は issue を更新できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null
+              })
+            })
+          }),
+          update: () => ({
+            eq: () => ({
+              select: () => ({
+                single: async () => ({
+                  data: {
+                    id: "issue-1",
+                    title: "Updated title",
+                    description: "Updated description",
+                    due_date: "2026-04-04",
+                  },
+                  error: null
+                })
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin"
+      },
+      body: JSON.stringify({
+        title: "Updated title",
+        description: "Updated description",
+        dueDate: "2026-04-04"
+      })
+    }))
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.message).toBe("Issue updated");
+    expect(body.issue.title).toBe("Updated title");
+
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "issue.update"
+      })
+    );
+  })
+
+  it("update対象の issue が見つからない時 404 を返し auditLog は呼ばれない"); 
+
+  it("updateに失敗すると 500 を返し auditLog は呼ばれない")
+})
+// updateをテスト中、あと２つ追加して次にすすむ、const {createApp} = await import("./app")のawaitもわからないので質問する
 
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
