@@ -948,16 +948,169 @@ describe("app", () => {
     expect(createAuditLog).toHaveBeenCalled();
   })
 
-  it("member はコメントを作成できる")
+  it("member はコメントを作成できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null,
+              })
+            })
+          })
+        }
+      }
 
-  it("viewer はコメントを作成できない")
+      if (table === "issue_comments") {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: {
+                  issue_id: "issue-1",
+                  user_id: "user-1",
+                  body: "Test comment",
+                }
+              })
+            })
+          })
+        }
+      }
 
-  it("issue が存在しない場合コメント作成は 404")
-  
-  it("コメント作成に失敗すると 500")
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "member",
+      },
+      body: JSON.stringify({ comment: "Test comment" })
+    }))
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.message).toBe("comment created");
+    expect(body.comment.body).toBe("Test comment");
+
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "comment.create" })
+    )
+  })
+
+  it("viewer はコメントを作成できない", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-2/comments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "viewer",
+      },
+      body: JSON.stringify("Test comment2")
+    }))
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Forbidden");
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("issue が存在しない場合コメント作成は 404", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "Issue not found" }
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-3/comments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "member",
+      },
+      body: JSON.stringify({ comment: "Test comment" })
+    }))
+
+    expect(res.status).toBe(404);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Issue not found");
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("コメント作成に失敗すると 500", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-4" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      if (table === "issue_comments") {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: null,
+                error: "DB insert comment failed"
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-4/comments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({comment: "Test comment"})
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to create comment");
+
+    expect(createAuditLog).not.toHaveBeenCalled()
+  })
 })
 
-
+// commentのテスト終了
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
 
