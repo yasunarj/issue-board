@@ -686,9 +686,277 @@ describe("app", () => {
     expect(body.error).toBe("Failed to update issue");
     expect(createAuditLog).not.toHaveBeenCalled();
   })
+
+  it("member は Issue を作成できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { display_name: "user-1" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issues") {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: {
+                  id: "issue-1",
+                  title: "New issue",
+                  description: "New description",
+                  due_date: "2026-04-10",
+                  created_by: "test-user"
+                }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "member",
+      },
+      body: JSON.stringify({
+        title: "New issue",
+        description: "New description",
+        dueDate: "2026-04-10",
+      })
+    }))
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+
+    expect(body.message).toBe("Issue created");
+    expect(body.issue.title).toBe("New issue");
+
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "issue.create"
+      })
+    )
+    expect(sendMailMock).toHaveBeenCalled();
+  })
+
+  it("admin は Issue を作成できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { display_name: "admin-user" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issues") {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: {
+                  id: "issue-1",
+                  title: "Admin title",
+                  description: "Admin description",
+                  due_date: null,
+                  created_by: "admin-user"
+                }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({
+        title: "Admin title",
+        description: "Admin description",
+        dueDate: "",
+      })
+    }))
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.message).toBe("Issue created");
+    expect(body.issue.title).toBe("Admin title");
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "issue.create" })
+    );
+    expect(sendMailMock).toHaveBeenCalled();
+  })
+
+  it("title が空だと 400 を返し auditLog は呼ばれない", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({
+        title: "  ",
+        description: "Admin description",
+        dueDate: "2026-04-10",
+      })
+    }))
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("title is required");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("issue 作成に失敗すると 500 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { display_name: "user-3" },
+                error: null,
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issues") {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: () => ({
+                data: null,
+                error: { message: "DB insert failed" }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({
+        title: "test-title",
+        description: "test-description",
+        dueDate: "2026-04-05",
+      })
+    }));
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("DB insert failed");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("sendMail が失敗しても issueは作成され 201 を返し auditLog も呼ばれる", async () => {
+    sendMailMock.mockRejectedValueOnce(new Error("mail failed"));
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { display_name: "user-4" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      if (table === "issues") {
+        return {
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: {
+                  id: "issue-1",
+                  title: "test-title",
+                  description: "test-description",
+                  due_date: null,
+                  created_by: "user-4",
+                }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-test-role": "admin",
+      },
+      body: JSON.stringify({
+        title: "test-title",
+        description: "test-description",
+        dueDate: ""
+      })
+    }))
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.message).toBe("Issue created");
+    expect(body.issue.description).toBe("test-description");
+
+    expect(createAuditLog).toHaveBeenCalled();
+  })
+
+  it("member はコメントを作成できる")
+
+  it("viewer はコメントを作成できない")
+
+  it("issue が存在しない場合コメント作成は 404")
+  
+  it("コメント作成に失敗すると 500")
 })
 
-// updateのテスト完了次へ進む
 
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
