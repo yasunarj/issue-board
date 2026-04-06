@@ -369,7 +369,7 @@ issues.get("/:id/comments", requireRole(["admin", "member", "viewer"]), async (c
   return c.json({
     ok: true,
     comments,
-  })
+  }, 200);
 });
 
 issues.post("/:id/comments", requireRole(["admin", "member"]), async (c) => {
@@ -467,7 +467,7 @@ issues.delete("/:issueId/comments/:commentId", requireRole(["admin"]), async (c)
 
   return c.json({
     message: "Comment deleted",
-  })
+  }, 200)
 })
 
 issues.get("/:id/checks", requireRole(["admin", "member", "viewer"]), async (c) => {

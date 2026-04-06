@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { createAuditLog } from "./lib/auditLog";
+import { kMaxLength } from "node:buffer";
 
 vi.mock("./middleware/auth", () => {
   return {
@@ -1099,7 +1100,7 @@ describe("app", () => {
         "Content-Type": "application/json",
         "x-test-role": "admin",
       },
-      body: JSON.stringify({comment: "Test comment"})
+      body: JSON.stringify({ comment: "Test comment" })
     }))
 
     expect(res.status).toBe(500);
@@ -1108,9 +1109,337 @@ describe("app", () => {
 
     expect(createAuditLog).not.toHaveBeenCalled()
   })
+
+  it("member は comment を取得できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issue_comments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: [{
+                  id: "comment-1",
+                  issue_id: "issue-1",
+                  body: "Test Comment"
+                }],
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issues-1/comments", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.ok).toBe(true);
+    expect(body.comments).toHaveLength(1);
+    expect(body.comments[0].body).toBe("Test Comment")
+  })
+
+  it("comments 取得時に issue が見つからないと 404 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "DB issue not found" },
+              })
+            })
+          })
+        }
+      }
+
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(404);
+    const body = await res.json() as { error: string }
+    expect(body.error).toBe("Issue not found");
+  })
+
+  it("comments 取得失敗時に 500 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issue_comments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: null,
+                error: { message: "DB comments not found" },
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to fetch comments");
+  })
+
+  it("viewer も comments 取得できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issue_comments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: [{
+                  id: "comment-1",
+                  issue_id: "issue-1",
+                  body: "Test comment"
+                }],
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+      method: "GET",
+      headers: {
+        "x-test-role": "viewer",
+      }
+    }))
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+
+    expect(body.ok).toBe(true);
+    expect(body.comments[0].body).toBe("Test comment");
+  })
+
+  it("admin 以外は comment を削除できず 403 を返す", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments/comment-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "member"
+      }
+    }))
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Forbidden");
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("admin は comment を削除できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issue_comments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: "comment-1",
+                    issue_id: "issue-1",
+                    body: "Test comment",
+                  },
+                  error: null,
+                })
+              })
+            })
+          }),
+          delete: () => ({
+            eq: async () => ({
+              error: null
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments/comment-1", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.message).toBe("Comment deleted");
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "comment.delete"
+      })
+    );
+  })
+
+  it("comment が見つからない場合 404 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issue_comments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: null,
+                  error: { message: "comment not found" }
+                })
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-4/comments/comment-4", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "admin"
+      }
+    }))
+
+    expect(res.status).toBe(404)
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Comment not found");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
+  it("comment の削除に失敗すると 500 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issue_comments") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: "comment-2",
+                    issue_id: "issue-2",
+                    body: "Test comment-2"
+                  }
+                })
+              })
+            })
+          }),
+
+          delete: () => ({
+            eq: async () => ({
+              error: { message: "Failed to delete comment" }
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+    const res = await app.fetch(new Request("http://localhost/issues/issue-2/comments/comment-2", {
+      method: "DELETE",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+
+    expect(res.status).toBe(500)
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to delete comment");
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  })
+
 })
 
-// commentのテスト終了
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
 
