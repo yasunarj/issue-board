@@ -1438,6 +1438,27 @@ describe("app", () => {
     expect(createAuditLog).not.toHaveBeenCalled();
   })
 
+  it("member は checks を取得できる", async () => {});
+
+  it("viewer も checks を取得できる", async () => {});
+
+  it("checks取得時に issue が見つからないと 404 を返す", async () => {});
+
+  it("checks の取得に失敗すると 500 を返す", async () => {});
+
+  it("member は issue を check できる", async () => {});
+
+  it("viewer も issue を check できる", async () => {});
+
+  it("check対象の issue が見つからないと 404 を返す", async () => {});
+
+  it("existing check の確認に失敗すると 500 を返し auditLog は呼ばれない", async () => {});
+
+  it("すでに check 済みなら Already checked を返し auditLog は呼ばれない", async () => {});
+
+  it("check の作成に失敗すると 500 を返し auditLog は呼ばれない", async () => {});
+
+  it("check 作成成功時に auditLog が呼ばれる", async () =>{});
 })
 
 
