@@ -1438,27 +1438,489 @@ describe("app", () => {
     expect(createAuditLog).not.toHaveBeenCalled();
   })
 
-  it("member は checks を取得できる", async () => {});
+  it("member は checks を取得できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" }
+              })
+            })
+          })
+        }
+      }
 
-  it("viewer も checks を取得できる", async () => {});
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                data: [{
+                  id: "check-1",
+                  issue_id: "issue-1",
+                }],
+                error: null,
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
 
-  it("checks取得時に issue が見つからないと 404 を返す", async () => {});
+    const { createApp } = await import("./app");
+    const app = createApp();
 
-  it("checks の取得に失敗すると 500 を返す", async () => {});
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/checks", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
 
-  it("member は issue を check できる", async () => {});
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.ok).toBe(true);
+    expect(body.checks[0].id).toBe("check-1");
+  });
 
-  it("viewer も issue を check できる", async () => {});
+  it("viewer も checks を取得できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => ({
+                data: { id: "issue-2" }
+              })
+            })
+          })
+        }
+      }
 
-  it("check対象の issue が見つからないと 404 を返す", async () => {});
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: [{
+                  id: "check-2",
+                  issue: "issue-2",
+                }]
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
 
-  it("existing check の確認に失敗すると 500 を返し auditLog は呼ばれない", async () => {});
+    const { createApp } = await import("./app");
+    const app = createApp();
+    const res = await app.fetch(new Request("http://localhost/issues/issue-2/checks", {
+      method: "GET",
+      headers: {
+        "x-test-role": "viewer",
+      }
+    }))
 
-  it("すでに check 済みなら Already checked を返し auditLog は呼ばれない", async () => {});
+    expect(res.status).toBe(200);
+    const body = await res.json() as any
+    expect(body.ok).toBe(true);
+    expect(body.checks[0].id).toBe("check-2")
+  });
 
-  it("check の作成に失敗すると 500 を返し auditLog は呼ばれない", async () => {});
+  it("checks取得時に issue が見つからないと 404 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "DB check not found" }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
 
-  it("check 作成成功時に auditLog が呼ばれる", async () =>{});
+    const { createApp } = await import("./app");
+    const app = createApp();
+    const res = await app.fetch(new Request("http://localhost/issues/issue-3/checks", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(404);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Issue not found");
+  });
+
+  it("checks の取得に失敗すると 500 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-4" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: null,
+                error: { message: "DB checks not found" }
+              })
+            })
+          })
+        }
+      }
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-4/checks", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to fetch checks");
+  });
+
+  it("member は issue を check できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: null,
+                  error: null,
+                })
+              })
+            })
+          }),
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: {
+                  id: "check-1",
+                  issue_id: "issue-1"
+                }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/check", {
+      method: "POST",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any
+    expect(body.message).toBe("Issue checked");
+    expect(body.alreadyChecked).toBe(false);
+    expect(body.check.id).toBe("check-1");
+
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "issue.check" })
+    )
+  });
+
+  it("viewer も issue を check できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-2" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: null,
+                  error: null,
+                })
+              })
+            })
+          }),
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: {
+                  id: "check-2",
+                  issue_id: "issue-2"
+                },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-2/check", {
+      method: "POST",
+      headers: {
+        "x-test-role": "viewer",
+      }
+    }))
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as any
+    expect(body.message).toBe("Issue checked");
+    expect(body.alreadyChecked).toBe(false);
+    expect(body.check.id).toBe("check-2");
+
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "issue.check" })
+    )
+  });
+
+  it("check対象の issue が見つからないと 404 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "DB issue not found" },
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-3/check", {
+      method: "POST",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(404);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Issue not found");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  });
+
+  it("existing check の確認に失敗すると 500 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-4" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: null,
+                  error: { message: "DB failed to check existing record" },
+                })
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-4/check", {
+      method: "POST",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to check existing record");
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  });
+
+  it("すでに check 済みなら Already checked を返し insert と auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-5" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { id: "check-5", issue_id: "issue-5" },
+                  error: null,
+                })
+              })
+            })
+          })
+        }
+      }
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+    const res = await app.fetch(new Request("http://localhost/issues/issue-5/check", {
+      method: "POST",
+      headers: {
+        "x-test-role": "member",
+      }
+    }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body.message).toBe("Already checked");
+    expect(body.alreadyChecked).toBe(true);
+
+    expect(createAuditLog).not.toHaveBeenCalled();
+  });
+
+  it("check の作成に失敗すると 500 を返し auditLog は呼ばれない", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-6" },
+                error: null,
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "issue_checks") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: null,
+                  error: null,
+                })
+              })
+            })
+          }),
+          insert: () => ({
+            select: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "DB failed to create check" }
+              })
+            })
+          })
+        }
+      }
+
+      return {}
+    })
+
+    const { createApp } = await import ("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-6/check", {
+      method: "POST",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to create check");
+    expect(createAuditLog).not.toHaveBeenCalled();
+  });
+
+  
 })
 
 

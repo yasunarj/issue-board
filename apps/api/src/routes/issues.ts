@@ -505,7 +505,7 @@ issues.get("/:id/checks", requireRole(["admin", "member", "viewer"]), async (c) 
     return c.json({ error: "Failed to fetch checks" }, 500);
   }
 
-  return c.json({ ok: true, checks })
+  return c.json({ ok: true, checks }, 200);
 })
 
 issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) => {
@@ -541,7 +541,7 @@ issues.post("/:id/check", requireRole(["admin", "member", "viewer"]), async (c) 
     return c.json({
       message: "Already checked",
       alreadyChecked: true,
-    });
+    }, 200);
   }
 
   // テーブルにデータがないということは未チェックなのでここでinsertをする
