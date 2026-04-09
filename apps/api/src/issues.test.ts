@@ -1,6 +1,10 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { createAuditLog } from "./lib/auditLog";
 
+type AppLike = {
+  fetch: (request: Request) => Response | Promise<Response>
+}
+
 vi.mock("./middleware/auth", () => {
   return {
     authMiddleware: async (c: any, next: () => Promise<void>) => {
@@ -52,16 +56,17 @@ beforeEach(() => {
   sendMailMock.mockResolvedValue(undefined);
 });
 
-const request = (
-  app: { fetch: (request: Request) => Promise<Response> },
+const request = async (
+  app: AppLike,
   path: string,
-  init?: RequestInit 
+  init?: RequestInit
 ) => {
   const res = app.fetch(new Request(`http://localhost${path}`, {
     ...init,
-    headers: { 
+    headers: {
       "Content-Type": "application/json",
-      ...init?.headers ?? {} }
+      ...init?.headers ?? {}
+    }
   }))
 
   return res;
@@ -84,7 +89,7 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues"));
+    const res = await request(app, "/issues")
 
     expect(res.status).toBe(401);
   });
@@ -93,17 +98,16 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues", {
+    const res = await request(app, "/issues", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-test-role": "viewer",
+        "x-test-role": "viewer"
       },
       body: JSON.stringify({
         title: "test",
         description: "test",
       })
-    }))
+    })
     expect(res.status).toBe(403);
   })
 
@@ -111,16 +115,15 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+    const res = await request(app, "/issues/issue-1/comments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "x-test-role": "member",
+        "x-test-role": "member"
       },
       body: JSON.stringify({
         comment: "   ",
       })
-    }))
+    })
 
     expect(res.status).toBe(400);
 
@@ -180,14 +183,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(
-      new Request("http://localhost/issues/issue-1/resolve", {
-        method: "PATCH",
-        headers: {
-          "x-test-role": "member",
-        },
-      })
-    );
+    const res = await request(app, "/issues/issue-1/resolve", {
+      method: "PATCH",
+      headers: {
+        "x-test-role": "member"
+      }
+    })
 
     expect(res.status).toBe(200);
 
@@ -245,12 +246,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/resolve", {
+    const res = await request(app, "/issues/issue-1/resolve", {
       method: "PATCH",
       headers: {
-        "x-test-role": "member",
+        "x-test-role": "member"
       }
-    }))
+    })
 
     expect(res.status).toBe(200);
 
@@ -282,13 +283,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-999/resolve", {
+    const res = await request(app, "/issues/issue-999/resolve", {
       method: "PATCH",
       headers: {
-        "x-test-role": "member",
-      },
+        "x-test-role": "member"
+      }
     })
-    );
 
     expect(res.status).toBe(404);
 
