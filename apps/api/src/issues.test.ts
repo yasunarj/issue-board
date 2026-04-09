@@ -1,6 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { createAuditLog } from "./lib/auditLog";
-import { kMaxLength } from "node:buffer";
 
 vi.mock("./middleware/auth", () => {
   return {
@@ -52,6 +51,21 @@ beforeEach(() => {
   fromMock.mockReset();
   sendMailMock.mockResolvedValue(undefined);
 });
+
+const request = (
+  app: { fetch: (request: Request) => Promise<Response> },
+  path: string,
+  init?: RequestInit 
+) => {
+  const res = app.fetch(new Request(`http://localhost${path}`, {
+    ...init,
+    headers: { 
+      "Content-Type": "application/json",
+      ...init?.headers ?? {} }
+  }))
+
+  return res;
+}
 
 describe("app", () => {
   it("GET /health で ok: true を返す", async () => {
@@ -1904,7 +1918,7 @@ describe("app", () => {
       return {}
     })
 
-    const { createApp } = await import ("./app");
+    const { createApp } = await import("./app");
     const app = createApp();
 
     const res = await app.fetch(new Request("http://localhost/issues/issue-6/check", {
@@ -1920,7 +1934,147 @@ describe("app", () => {
     expect(createAuditLog).not.toHaveBeenCalled();
   });
 
-  
+  it("admin は issue の audit logs を取得できる", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-1" },
+                error: null
+              })
+            })
+          })
+        }
+      };
+
+      if (table === "audit_logs") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: [{
+                  id: "audit_log-1",
+                  issue_id: "issue-1",
+                  action: "issue.create",
+                  detail: {},
+                }],
+                error: null,
+              })
+            })
+          })
+        }
+      }
+      return {};
+    })
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-1/audit-logs", {
+      method: "GET",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+
+    expect(body.ok).toBe(true);
+    expect(body.logs[0].action).toBe("issue.create");
+  });
+
+  it("admin 以外は audit logs を取得できず 403 を返す", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-2/audit-logs", {
+      method: "GET",
+      headers: {
+        "x-test-role": "member",
+      }
+    }))
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Forbidden");
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("audit log取得時に issue が見つからないと 404 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: null,
+                error: { message: "DB issue not found" }
+              })
+            })
+          })
+        }
+      }
+      return {}
+    })
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await app.fetch(new Request("http://localhost/issues/issue-3/audit-logs", {
+      method: "GET",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+    expect(res.status).toBe(404);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("issue not found");
+  });
+
+  it("audit logs の取得に失敗すると 500 を返す", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { id: "issue-4" },
+                error: null
+              })
+            })
+          })
+        }
+      }
+
+      if (table === "audit_logs") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: async () => ({
+                data: null,
+                error: { message: "DB not get audit logs" }
+              })
+            })
+          })
+        }
+      }
+      return {};
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+    const res = await app.fetch(new Request("http://localhost/issues/issue-4/audit-logs", {
+      method: "GET",
+      headers: {
+        "x-test-role": "admin",
+      }
+    }))
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("Failed to fetch audit logs");
+  })
 })
 
 

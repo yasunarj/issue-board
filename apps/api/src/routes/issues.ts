@@ -620,7 +620,7 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
   return c.json({
     ok: true,
     logs: logs ?? []
-  })
+  }, 200)
 });
 
 export default issues;
