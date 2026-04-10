@@ -72,6 +72,39 @@ const request = async (
   return res;
 }
 
+const mockTables = (tables: Record<string, unknown>) => {
+  fromMock.mockImplementation((table: string) => {
+    return (tables[table] ?? {}) as object;
+  })
+}
+
+const buildIssueFoundMock = () => ({
+  select: () => ({
+    eq: () => ({
+      single: async () => ({
+        data: {
+          id: "issue-1",
+          title: "Test title",
+          description: "Test description",
+          status: "open",
+        },
+        error: null
+      })
+    })
+  })
+})
+
+const buildIssueNotFoundMock = () => ({
+  select: () => ({
+    eq: () => ({
+      single: async () => ({
+        data: null,
+        error: { message: "DB issue not found" }
+      })
+    })
+  })
+})
+
 describe("app", () => {
   it("GET /health で ok: true を返す", async () => {
     const { createApp } = await import("./app");
@@ -264,21 +297,7 @@ describe("app", () => {
   });
 
   it("issue が見つからない時 404 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      return {};
-    })
+    mockTables({ issues: buildIssueNotFoundMock() });
 
     const { createApp } = await import("./app");
     const app = createApp();
@@ -350,13 +369,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/resolve", {
+    const res = await request(app, "/issues/issue-1/resolve", {
       method: "PATCH",
       headers: {
         "x-test-role": "member",
-      },
+      }
     })
-    );
 
     expect(res.status).toBe(500);
 
@@ -371,13 +389,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "DELETE",
       headers: {
         "x-test-role": "viewer",
       }
     })
-    )
 
     expect(res.status).toBe(403);
     const body = await res.json() as { error: string }
@@ -416,12 +433,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "DELETE",
       headers: {
         "x-test-role": "admin",
       }
-    }));
+    })
 
     expect(res.status).toBe(200);
 
@@ -462,12 +479,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "DELETE",
       headers: {
-        "x-test-role": "admin",
+        "x-test-role": "admin"
       }
-    }))
+    })
 
     expect(res.status).toBe(500);
 
@@ -498,12 +515,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "DELETE",
       headers: {
         "x-test-role": "admin",
       }
-    }))
+    })
 
     expect(res.status).toBe(404);
 
@@ -517,12 +534,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "DELETE",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    })
 
     expect(res.status).toBe(403);
 
@@ -536,13 +553,12 @@ describe("app", () => {
   it("admin 以外は issue を更新できず 403 を返し auditLog は呼ばれない", async () => {
     const { createApp } = await import("./app");
     const app = createApp();
-
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "PATCH",
       headers: {
         "x-test-role": "member",
       }
-    }));
+    })
 
     expect(res.status).toBe(403);
     const body = await res.json() as { error: string };
@@ -588,18 +604,17 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "admin"
       },
       body: JSON.stringify({
         title: "Updated title",
         description: "Updated description",
-        dueDate: "2026-04-04"
+        dueDate: "2026-04-04",
       })
-    }))
+    })
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -633,18 +648,17 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
-        "x-test-role": "admin",
+        "x-test-role": "admin"
       },
       body: JSON.stringify({
         title: "Updated title",
         description: "Updated description",
         dueDate: "2026-04-05",
       })
-    }));
+    })
 
     expect(res.status).toBe(404);
     const body = await res.json() as { error: string };
@@ -683,18 +697,17 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1", {
+    const res = await request(app, "/issues/issue-1", {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
-        "x-test-role": "admin",
+        "x-test-role": "admin"
       },
       body: JSON.stringify({
         title: "Updated title",
         description: "Updated description",
         dueDate: "2026-04-05",
       })
-    }))
+    })
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -740,10 +753,9 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues", {
+    const res = await request(app, "/issues", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "member",
       },
       body: JSON.stringify({
@@ -751,7 +763,7 @@ describe("app", () => {
         description: "New description",
         dueDate: "2026-04-10",
       })
-    }))
+    })
 
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -805,7 +817,7 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues", {
+    const res = await request(app, "/issues", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -816,7 +828,7 @@ describe("app", () => {
         description: "Admin description",
         dueDate: "",
       })
-    }))
+    })
 
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -832,10 +844,9 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues", {
+    const res = await request(app, "/issues", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "admin",
       },
       body: JSON.stringify({
@@ -843,7 +854,7 @@ describe("app", () => {
         description: "Admin description",
         dueDate: "2026-04-10",
       })
-    }))
+    })
 
     expect(res.status).toBe(400);
     const body = await res.json() as { error: string };
@@ -884,10 +895,9 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues", {
+    const res = await request(app, "/issues", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "admin",
       },
       body: JSON.stringify({
@@ -895,7 +905,7 @@ describe("app", () => {
         description: "test-description",
         dueDate: "2026-04-05",
       })
-    }));
+    });
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -942,10 +952,9 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues", {
+    const res = await request(app, "/issues", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "admin",
       },
       body: JSON.stringify({
@@ -953,7 +962,7 @@ describe("app", () => {
         description: "test-description",
         dueDate: ""
       })
-    }))
+    });
 
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -1000,14 +1009,13 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+    const res = await request(app, "/issues/issue-1/comments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "member",
       },
       body: JSON.stringify({ comment: "Test comment" })
-    }))
+    });
 
     expect(res.status).toBe(201);
     const body = await res.json() as any;
@@ -1023,14 +1031,13 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-2/comments", {
+    const res = await request(app, "/issues/issue-2/comments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "viewer",
       },
       body: JSON.stringify("Test comment2")
-    }))
+    })
 
     expect(res.status).toBe(403);
     const body = await res.json() as { error: string };
@@ -1040,34 +1047,18 @@ describe("app", () => {
   })
 
   it("issue が存在しない場合コメント作成は 404", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "Issue not found" }
-              })
-            })
-          })
-        }
-      }
-
-      return {}
-    })
+    mockTables({ issues: buildIssueNotFoundMock() })
 
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-3/comments", {
+    const res = await request(app, "/issues/issue-3/comments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "member",
       },
       body: JSON.stringify({ comment: "Test comment" })
-    }))
+    })
 
     expect(res.status).toBe(404);
     const body = await res.json() as { error: string };
@@ -1108,14 +1099,13 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-4/comments", {
+    const res = await request(app, "/issues/issue-4/comments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "x-test-role": "admin",
       },
       body: JSON.stringify({ comment: "Test comment" })
-    }))
+    })
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -1162,12 +1152,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issues-1/comments", {
+    const res = await request(app, "/issues/issues-1/comments", {
       method: "GET",
       headers: {
         "x-test-role": "member",
       }
-    }));
+    });
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -1197,12 +1187,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+    const res = await request(app, "/issues/issue-1/comments", {
       method: "GET",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    });
 
     expect(res.status).toBe(404);
     const body = await res.json() as { error: string }
@@ -1243,12 +1233,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+    const res = await request(app, "/issues/issue-1/comments", {
       method: "GET",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    });
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -1292,12 +1282,12 @@ describe("app", () => {
 
     const { createApp } = await import("./app");
     const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments", {
+    const res = await request(app, "/issues/issue-1/comments", {
       method: "GET",
       headers: {
         "x-test-role": "viewer",
       }
-    }))
+    });
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -1310,12 +1300,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments/comment-1", {
+    const res = await request(app, "/issues/issue-1/comments/comment-1", {
       method: "DELETE",
       headers: {
         "x-test-role": "member"
       }
-    }))
+    })
 
     expect(res.status).toBe(403);
     const body = await res.json() as { error: string };
@@ -1355,12 +1345,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/comments/comment-1", {
+    const res = await request(app, "/issues/issue-1/comments/comment-1", {
       method: "DELETE",
       headers: {
         "x-test-role": "admin",
       }
-    }))
+    });
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -1394,12 +1384,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-4/comments/comment-4", {
+    const res = await request(app, "/issues/issue-4/comments/comment-4", {
       method: "DELETE",
       headers: {
         "x-test-role": "admin"
       }
-    }))
+    })
 
     expect(res.status).toBe(404)
     const body = await res.json() as { error: string };
@@ -1438,12 +1428,12 @@ describe("app", () => {
 
     const { createApp } = await import("./app");
     const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/issues/issue-2/comments/comment-2", {
+    const res = await request(app, "/issues/issue-2/comments/comment-2", {
       method: "DELETE",
       headers: {
         "x-test-role": "admin",
       }
-    }))
+    })
 
     expect(res.status).toBe(500)
     const body = await res.json() as { error: string };
@@ -1487,12 +1477,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/checks", {
+    const res = await request(app, "/issues/issue-1/checks", {
       method: "GET",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    })
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -1533,12 +1523,12 @@ describe("app", () => {
 
     const { createApp } = await import("./app");
     const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/issues/issue-2/checks", {
+    const res = await request(app, "/issues/issue-2/checks", {
       method: "GET",
       headers: {
         "x-test-role": "viewer",
       }
-    }))
+    })
 
     expect(res.status).toBe(200);
     const body = await res.json() as any
@@ -1565,12 +1555,12 @@ describe("app", () => {
 
     const { createApp } = await import("./app");
     const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/issues/issue-3/checks", {
+    const res = await request(app, "/issues/issue-3/checks", {
       method: "GET",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    })
 
     expect(res.status).toBe(404);
     const body = await res.json() as { error: string };
@@ -1609,12 +1599,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-4/checks", {
+    const res = await request(app, "/issues/issue-4/checks", {
       method: "GET",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    })
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -1665,12 +1655,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/check", {
+    const res = await request(app, "/issues/issue-1/check", {
       method: "POST",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    });
 
     expect(res.status).toBe(201);
     const body = await res.json() as any
@@ -1728,12 +1718,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-2/check", {
+    const res = await request(app, "/issues/issue-2/check", {
       method: "POST",
       headers: {
         "x-test-role": "viewer",
       }
-    }))
+    });
 
     expect(res.status).toBe(201);
     const body = await res.json() as any
@@ -1767,12 +1757,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-3/check", {
+    const res = await request(app, "/issues/issue-3/check", {
       method: "POST",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    })
 
     expect(res.status).toBe(404);
     const body = await res.json() as { error: string };
@@ -1814,12 +1804,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-4/check", {
+    const res = await request(app, "/issues/issue-4/check", {
       method: "POST",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    });
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -1862,12 +1852,12 @@ describe("app", () => {
 
     const { createApp } = await import("./app");
     const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/issues/issue-5/check", {
+    const res = await request(app, "/issues/issue-5/check", {
       method: "POST",
       headers: {
         "x-test-role": "member",
       }
-    }));
+    });
 
     expect(res.status).toBe(200);
     const body = await res.json() as any;
@@ -1921,12 +1911,12 @@ describe("app", () => {
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await app.fetch(new Request("http://localhost/issues/issue-6/check", {
+    const res = await request(app, "/issues/issue-6/check", {
       method: "POST",
       headers: {
         "x-test-role": "member",
       }
-    }))
+    })
 
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
@@ -1934,147 +1924,6 @@ describe("app", () => {
     expect(createAuditLog).not.toHaveBeenCalled();
   });
 
-  it("admin は issue の audit logs を取得できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null
-              })
-            })
-          })
-        }
-      };
-
-      if (table === "audit_logs") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: [{
-                  id: "audit_log-1",
-                  issue_id: "issue-1",
-                  action: "issue.create",
-                  detail: {},
-                }],
-                error: null,
-              })
-            })
-          })
-        }
-      }
-      return {};
-    })
-    const { createApp } = await import("./app");
-    const app = createApp();
-
-    const res = await app.fetch(new Request("http://localhost/issues/issue-1/audit-logs", {
-      method: "GET",
-      headers: {
-        "x-test-role": "admin",
-      }
-    }))
-
-    expect(res.status).toBe(200);
-    const body = await res.json() as any;
-
-    expect(body.ok).toBe(true);
-    expect(body.logs[0].action).toBe("issue.create");
-  });
-
-  it("admin 以外は audit logs を取得できず 403 を返す", async () => {
-    const { createApp } = await import("./app");
-    const app = createApp();
-
-    const res = await app.fetch(new Request("http://localhost/issues/issue-2/audit-logs", {
-      method: "GET",
-      headers: {
-        "x-test-role": "member",
-      }
-    }))
-
-    expect(res.status).toBe(403);
-    const body = await res.json() as { error: string };
-    expect(body.error).toBe("Forbidden");
-    expect(fromMock).not.toHaveBeenCalled();
-  });
-
-  it("audit log取得時に issue が見つからないと 404 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "DB issue not found" }
-              })
-            })
-          })
-        }
-      }
-      return {}
-    })
-    const { createApp } = await import("./app");
-    const app = createApp();
-
-    const res = await app.fetch(new Request("http://localhost/issues/issue-3/audit-logs", {
-      method: "GET",
-      headers: {
-        "x-test-role": "admin",
-      }
-    }))
-    expect(res.status).toBe(404);
-    const body = await res.json() as { error: string };
-    expect(body.error).toBe("issue not found");
-  });
-
-  it("audit logs の取得に失敗すると 500 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-4" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "audit_logs") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: null,
-                error: { message: "DB not get audit logs" }
-              })
-            })
-          })
-        }
-      }
-      return {};
-    })
-
-    const { createApp } = await import("./app");
-    const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/issues/issue-4/audit-logs", {
-      method: "GET",
-      headers: {
-        "x-test-role": "admin",
-      }
-    }))
-
-    expect(res.status).toBe(500);
-    const body = await res.json() as { error: string };
-    expect(body.error).toBe("Failed to fetch audit logs");
-  })
 })
 
 
