@@ -78,15 +78,17 @@ const mockTables = (tables: Record<string, unknown>) => {
   })
 }
 
-const buildIssueFoundMock = () => ({
+const buildIssueSelectFoundMock = () => ({
   select: () => ({
     eq: () => ({
       single: async () => ({
         data: {
           id: "issue-1",
           title: "Test title",
+          due_date: "2026-04-10",
           description: "Test description",
           status: "open",
+          created_by: "test-user",
         },
         error: null
       })
@@ -100,6 +102,179 @@ const buildIssueNotFoundMock = () => ({
       single: async () => ({
         data: null,
         error: { message: "DB issue not found" }
+      })
+    })
+  })
+})
+
+const buildIssueInsertMock = () => ({
+  insert: () => ({
+    select: () => ({
+      single: async () => ({
+        data: {
+          id: "issue-1",
+          title: "Test title",
+          description: "Test description",
+          due_date: "2026-04-10",
+          created_by: "test-user"
+        }
+      })
+    })
+  })
+})
+
+const buildProfileFoundMock = () => ({
+  select: () => ({
+    eq: () => ({
+      single: async () => ({
+        data: { display_name: "user-1" },
+        error: null
+      })
+    })
+  })
+})
+
+const buildCommentInsertMock = () => ({
+  insert: () => ({
+    select: () => ({
+      single: async () => ({
+        data: {
+          issue_id: "issue-1",
+          user_id: "user-1",
+          body: "Test comment",
+        }
+      })
+    })
+  })
+})
+
+const buildIssueDeleteSuccessMock = () => ({
+  ...buildIssueSelectFoundMock(),
+  delete: () => ({
+    eq: async () => ({
+      error: null
+    })
+  })
+})
+
+const buildIssueDeleteFailedMock = () => ({
+  ...buildIssueSelectFoundMock(),
+  delete: () => ({
+    eq: async () => ({
+      error: { message: "DB delete failed" },
+    })
+  })
+})
+
+const buildIssueUpdateSuccessMock = () => ({
+  ...buildIssueSelectFoundMock(),
+  update: () => ({
+    eq: () => ({
+      select: () => ({
+        single: async () => ({
+          data: {
+            id: "issue-1",
+            title: "Updated title",
+            description: "Updated description",
+            due_data: "2026-04-04",
+          },
+          error: null,
+        })
+      })
+    })
+  })
+})
+
+const buildIssueUpdateFailedMock = () => ({
+  ...buildIssueSelectFoundMock(),
+  update: () => ({
+    eq: () => ({
+      select: () => ({
+        single: async () => ({
+          data: null,
+          error: { message: "DB update failed" }
+        })
+      })
+    })
+  })
+})
+
+const buildCommentsListMock = () => ({
+  select: () => ({
+    eq: () => ({
+      order: async () => ({
+        data: [{
+          id: "comment-1",
+          issue_id: "issue-1",
+          body: "Test Comment",
+        }],
+        error: null
+      })
+    })
+  })
+})
+
+const buildCommentsListFailedMock = () => ({
+  select: () => ({
+    eq: () => ({
+      order: async () => ({
+        data: null,
+        error: { message: "DB comments not found" }
+      })
+    })
+  })
+})
+
+const buildChecksListMock = () => ({
+  select: () => ({
+    eq: () => ({
+      order: async () => ({
+        data: [{
+          id: "check-1",
+          issue_id: "issue-1"
+        }],
+        error: null,
+      })
+    })
+  })
+})
+
+const buildExistingCheckNoneMock = () => ({
+  select: () => ({
+    eq: () => ({
+      eq: () => ({
+        maybeSingle: async () => ({
+          data: null,
+          error: null
+        })
+      })
+    })
+  })
+})
+
+const buildExistingCheckFoundMock = () => ({
+  select: () => ({
+    eq: () => ({
+      eq: () => ({
+        maybeSingle: async () => ({
+          data: { id: "check-1", issue_id: "issue-1" },
+          error: null,
+        })
+      })
+    })
+  })
+})
+
+const buildCheckInsertSuccessMock = () => ({
+  ...buildExistingCheckNoneMock(),
+  insert: () => ({
+    select: () => ({
+      single: async () => ({
+        data: {
+          id: "check-1",
+          issue_id: "issue-1"
+        },
+        error: null
       })
     })
   })
@@ -405,29 +580,8 @@ describe("app", () => {
   })
 
   it("admin は issue を削除できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  id: "issue-1",
-                  title: "Test Title",
-                },
-                error: null,
-              })
-            })
-          }),
-          delete: () => ({
-            eq: async () => ({
-              error: null,
-            })
-          })
-        }
-      }
-
-      return {}
+    mockTables({
+      issues: buildIssueDeleteSuccessMock(),
     })
 
     const { createApp } = await import("./app");
@@ -451,29 +605,8 @@ describe("app", () => {
   })
 
   it("delete に失敗すると 500 を返し auditLog が呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  id: "issue-1",
-                  title: "Test Title"
-                }
-              })
-            })
-          }),
-          delete: () => ({
-            eq: async () => ({
-              error: {
-                message: "DB delete failed",
-              }
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      issues: buildIssueDeleteFailedMock(),
     })
 
     const { createApp } = await import("./app");
@@ -495,23 +628,7 @@ describe("app", () => {
   })
 
   it("delete対象の issue が見つからない時 404 を返し auditLog は呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "Issue not found" }
-              })
-            })
-          })
-        }
-      }
-
-      return {}
-    })
-
+    mockTables({ issues: buildIssueNotFoundMock() })
     const { createApp } = await import("./app");
     const app = createApp();
 
@@ -569,36 +686,8 @@ describe("app", () => {
   })
 
   it("admin は issue を更新できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null
-              })
-            })
-          }),
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: {
-                    id: "issue-1",
-                    title: "Updated title",
-                    description: "Updated description",
-                    due_date: "2026-04-04",
-                  },
-                  error: null
-                })
-              })
-            })
-          })
-        }
-      }
-
-      return {}
+    mockTables({
+      issues: buildIssueUpdateSuccessMock()
     })
 
     const { createApp } = await import("./app");
@@ -629,21 +718,7 @@ describe("app", () => {
   })
 
   it("update対象の issue が見つからない時 404 を返し auditLog は呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "Issue not found" }
-              })
-            })
-          })
-        }
-      }
-      return {}
-    })
+    mockTables({ issues: buildIssueNotFoundMock() });
 
     const { createApp } = await import("./app");
     const app = createApp();
@@ -668,30 +743,8 @@ describe("app", () => {
   });
 
   it("updateに失敗すると 500 を返し auditLog は呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null,
-              })
-            })
-          }),
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: null,
-                  error: { message: "DB update failed" },
-                })
-              })
-            })
-          })
-        }
-      }
-      return {};
+    mockTables({
+      issues: buildIssueUpdateFailedMock()
     })
 
     const { createApp } = await import("./app");
@@ -716,38 +769,9 @@ describe("app", () => {
   })
 
   it("member は Issue を作成できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { display_name: "user-1" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issues") {
-        return {
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: {
-                  id: "issue-1",
-                  title: "New issue",
-                  description: "New description",
-                  due_date: "2026-04-10",
-                  created_by: "test-user"
-                }
-              })
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      profiles: buildProfileFoundMock(),
+      issues: buildIssueInsertMock()
     })
 
     const { createApp } = await import("./app");
@@ -759,8 +783,8 @@ describe("app", () => {
         "x-test-role": "member",
       },
       body: JSON.stringify({
-        title: "New issue",
-        description: "New description",
+        title: "Test title",
+        description: "Test description",
         dueDate: "2026-04-10",
       })
     })
@@ -769,7 +793,7 @@ describe("app", () => {
     const body = await res.json() as any;
 
     expect(body.message).toBe("Issue created");
-    expect(body.issue.title).toBe("New issue");
+    expect(body.issue.title).toBe("Test title");
 
     expect(createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -780,38 +804,9 @@ describe("app", () => {
   })
 
   it("admin は Issue を作成できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { display_name: "admin-user" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issues") {
-        return {
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: {
-                  id: "issue-1",
-                  title: "Admin title",
-                  description: "Admin description",
-                  due_date: null,
-                  created_by: "admin-user"
-                }
-              })
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      profiles: buildProfileFoundMock(),
+      issues: buildIssueInsertMock(),
     })
 
     const { createApp } = await import("./app");
@@ -833,7 +828,7 @@ describe("app", () => {
     expect(res.status).toBe(201);
     const body = await res.json() as any;
     expect(body.message).toBe("Issue created");
-    expect(body.issue.title).toBe("Admin title");
+    expect(body.issue.title).toBe("Test title");
     expect(createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: "issue.create" })
     );
@@ -916,37 +911,9 @@ describe("app", () => {
   it("sendMail が失敗しても issueは作成され 201 を返し auditLog も呼ばれる", async () => {
     sendMailMock.mockRejectedValueOnce(new Error("mail failed"));
 
-    fromMock.mockImplementation((table: string) => {
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { display_name: "user-4" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-      if (table === "issues") {
-        return {
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: {
-                  id: "issue-1",
-                  title: "test-title",
-                  description: "test-description",
-                  due_date: null,
-                  created_by: "user-4",
-                }
-              })
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      profiles: buildProfileFoundMock(),
+      issues: buildIssueInsertMock()
     })
 
     const { createApp } = await import("./app");
@@ -967,43 +934,15 @@ describe("app", () => {
     expect(res.status).toBe(201);
     const body = await res.json() as any;
     expect(body.message).toBe("Issue created");
-    expect(body.issue.description).toBe("test-description");
+    expect(body.issue.description).toBe("Test description");
 
     expect(createAuditLog).toHaveBeenCalled();
   })
 
   it("member はコメントを作成できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null,
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_comments") {
-        return {
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: {
-                  issue_id: "issue-1",
-                  user_id: "user-1",
-                  body: "Test comment",
-                }
-              })
-            })
-          })
-        }
-      }
-
-      return {};
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_comments: buildCommentInsertMock(),
     })
 
     const { createApp } = await import("./app");
@@ -1115,44 +1054,15 @@ describe("app", () => {
   })
 
   it("member は comment を取得できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_comments") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: [{
-                  id: "comment-1",
-                  issue_id: "issue-1",
-                  body: "Test Comment"
-                }],
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      return {}
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_comments: buildCommentsListMock(),
     })
 
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await request(app, "/issues/issues-1/comments", {
+    const res = await request(app, "/issues/issue-1/comments", {
       method: "GET",
       headers: {
         "x-test-role": "member",
@@ -1167,22 +1077,7 @@ describe("app", () => {
   })
 
   it("comments 取得時に issue が見つからないと 404 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "DB issue not found" },
-              })
-            })
-          })
-        }
-      }
-
-      return {};
-    })
+    mockTables({ issues: buildIssueNotFoundMock() });
 
     const { createApp } = await import("./app");
     const app = createApp();
@@ -1200,34 +1095,9 @@ describe("app", () => {
   })
 
   it("comments 取得失敗時に 500 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_comments") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: null,
-                error: { message: "DB comments not found" },
-              })
-            })
-          })
-        }
-      }
-
-      return {}
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_comments: buildCommentsListFailedMock()
     })
 
     const { createApp } = await import("./app");
@@ -1246,38 +1116,9 @@ describe("app", () => {
   })
 
   it("viewer も comments 取得できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_comments") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: [{
-                  id: "comment-1",
-                  issue_id: "issue-1",
-                  body: "Test comment"
-                }],
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      return {}
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_comments: buildCommentsListMock()
     })
 
     const { createApp } = await import("./app");
@@ -1293,7 +1134,7 @@ describe("app", () => {
     const body = await res.json() as any;
 
     expect(body.ok).toBe(true);
-    expect(body.comments[0].body).toBe("Test comment");
+    expect(body.comments[0].body).toBe("Test Comment");
   })
 
   it("admin 以外は comment を削除できず 403 を返す", async () => {
@@ -1443,35 +1284,9 @@ describe("app", () => {
   })
 
   it("member は checks を取得できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-1" }
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_checks") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: () => ({
-                data: [{
-                  id: "check-1",
-                  issue_id: "issue-1",
-                }],
-                error: null,
-              })
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_checks: buildChecksListMock()
     })
 
     const { createApp } = await import("./app");
@@ -1491,34 +1306,9 @@ describe("app", () => {
   });
 
   it("viewer も checks を取得できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: () => ({
-                data: { id: "issue-2" }
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_checks") {
-        return {
-          select: () => ({
-            eq: () => ({
-              order: async () => ({
-                data: [{
-                  id: "check-2",
-                  issue: "issue-2",
-                }]
-              })
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_checks: buildChecksListMock(),
     })
 
     const { createApp } = await import("./app");
@@ -1533,25 +1323,11 @@ describe("app", () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any
     expect(body.ok).toBe(true);
-    expect(body.checks[0].id).toBe("check-2")
+    expect(body.checks[0].id).toBe("check-1")
   });
 
   it("checks取得時に issue が見つからないと 404 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "DB check not found" }
-              })
-            })
-          })
-        }
-      }
-      return {}
-    })
+    mockTables({ issues: buildIssueNotFoundMock() })
 
     const { createApp } = await import("./app");
     const app = createApp();
@@ -1674,51 +1450,15 @@ describe("app", () => {
   });
 
   it("viewer も issue を check できる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-2" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-      if (table === "issue_checks") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({
-                  data: null,
-                  error: null,
-                })
-              })
-            })
-          }),
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: {
-                  id: "check-2",
-                  issue_id: "issue-2"
-                },
-                error: null
-              })
-            })
-          })
-        }
-      }
-      return {}
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_checks: buildCheckInsertSuccessMock()
     })
 
     const { createApp } = await import("./app");
     const app = createApp();
 
-    const res = await request(app, "/issues/issue-2/check", {
+    const res = await request(app, "/issues/issue-1/check", {
       method: "POST",
       headers: {
         "x-test-role": "viewer",
@@ -1729,7 +1469,7 @@ describe("app", () => {
     const body = await res.json() as any
     expect(body.message).toBe("Issue checked");
     expect(body.alreadyChecked).toBe(false);
-    expect(body.check.id).toBe("check-2");
+    expect(body.check.id).toBe("check-1");
 
     expect(createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: "issue.check" })
@@ -1737,22 +1477,7 @@ describe("app", () => {
   });
 
   it("check対象の issue が見つからないと 404 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: null,
-                error: { message: "DB issue not found" },
-              })
-            })
-          })
-        }
-      }
-
-      return {}
-    })
+    mockTables({ issues: buildIssueNotFoundMock() });
 
     const { createApp } = await import("./app");
     const app = createApp();
@@ -1818,41 +1543,15 @@ describe("app", () => {
     expect(createAuditLog).not.toHaveBeenCalled();
   });
 
-  it("すでに check 済みなら Already checked を返し insert と auditLog は呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { id: "issue-5" },
-                error: null
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "issue_checks") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({
-                  data: { id: "check-5", issue_id: "issue-5" },
-                  error: null,
-                })
-              })
-            })
-          })
-        }
-      }
-      return {};
+  it("すでに check 済みなら Already checked を返し insert と auditLog は呼ばれない", async  () => {
+    mockTables({
+      issues: buildIssueSelectFoundMock(),
+      issue_checks: buildExistingCheckFoundMock()
     })
 
     const { createApp } = await import("./app");
     const app = createApp();
-    const res = await request(app, "/issues/issue-5/check", {
+    const res = await request(app, "/issues/issue-1/check", {
       method: "POST",
       headers: {
         "x-test-role": "member",
