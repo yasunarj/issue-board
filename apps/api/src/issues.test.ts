@@ -1625,6 +1625,8 @@ describe("app", () => {
 
 })
 
+// checkのテスト４本に共通関数を当てることが可能、さらにhelper関数を３つ追加できるようなのでそこを追加して再度確認をしてもらう。
+
 
 // import { beforeEach, describe, expect, it, vi } from "vitest";
 
