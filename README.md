@@ -1,121 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Issue Board
 
-## Web Environment Variables
+店舗で発生した問題点を登録し、関係者で情報共有しながら、解決策の検討・実行・完了までの流れを管理するためのアプリです。
 
-The web app expects the following value in `apps/web/.env.local`.
+## 概要
 
-```bash
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8787
-```
+Issue Board は、店舗運営の中で発生した課題や問題点を記録し、対応状況を可視化するための社内向けアプリです。
 
-## Getting Started
+問題の登録だけで終わらず、次の流れを一貫してサポートします。
 
-First, run the development server:
+- 問題点を Issue として登録する
+- コメントで状況や対応案を共有する
+- 誰が確認したかを記録する
+- 対応完了後に解決済みにする
+- 操作履歴を監査ログとして残す
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 主な機能
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- ログイン / ユーザー登録
+- Issue の作成
+- Issue 一覧表示
+- Issue 詳細表示
+- コメント投稿
+- 確認チェック（見ました）
+- Issue の解決 / 未解決切り替え
+- Issue の編集 / 削除
+- 監査ログの記録 / 閲覧
+- メール通知
+- ロールによる権限制御
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 想定利用シーン
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 店舗で発生したトラブルの共有
+- 設備やオペレーション上の改善点の記録
+- 対応漏れの防止
+- 誰が確認・対応したかの可視化
+- 過去の対応履歴の振り返り
 
-## Learn More
+## 技術構成
 
-To learn more about Next.js, take a look at the following resources:
+### Frontend
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Supabase JavaScript Client
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Backend
+- Hono
+- TypeScript
+- Supabase
+- Zod
+- Nodemailer
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 権限
+ロールごとに利用できる機能が異なります。
 
-## Deploy on Vercel
+### admin
+- Issue 一覧/詳細閲覧
+- Issue 作成
+- Issue 編集
+- Issue 削除
+- Issue 解決/未解決切り替え
+- コメント投稿
+- コメント削除
+- 確認チェック
+- 監視ログ閲覧
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### member
+- Issue 一覧/詳細閲覧
+- Issue 作成
+- コメント投稿
+- Issue 解決/未解決切り替え
+- 確認チェック
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# issue-borad
+### viewer
+- Issue 一覧/詳細閲覧
+- コメント閲覧
+- 確認チェック
+
+## 画面一覧
+- /
+  - ログイン画面
+- /register
+  - 新規登録画面
+- /issues/[id]
+  - Issue 詳細画面
+- /admin/audit-logs
+  - 監視ログ画面
+
+## API概要
+
+### 共通
+- GET /health
+- GET /me
+
+### Issues
+- GET /issues
+- POST /issues
+- GET /issues/:id
+- PATCH /issues/:id
+- DELETE /issues/:id
+- PATCH /issues/:id/resolve
+
+### Comments
+- GET /issues/:id/comments
+- POST /issues/:id/comments
+- DELETE /issues/:issueId/comments/:commentId
+
+### Checks
+- GET /issues/:id/audit-logs
+- 別途、全体監視ログ取得用ルートあり
+
+## バリデーション
 
 
-# issues routes 観点表
-
-## PATCH /issues/:id/resolve
-- [x] open → resolved 成功
-- [x] resolved → open 成功
-- [x] issue not found → 404
-- [x] update失敗 → 500
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
-
-## DELETE /issues/:id
-- [x] admin は削除成功
-- [x] member/viewer は 403
-- [x] issue not found → 404
-- [x] delete失敗 → 500
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
-
-## PATCH /issues/:id
-- [x] admin は更新成功
-- [x] member/viewer は 403
-- [x] issue not found → 404
-- [x] update失敗 → 500
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
-
-## POST /issues
-- [x] admin は作成成功
-- [x] member は作成成功
-- [x] viewer は 403
-- [x] title 空 → 400
-- [x] insert失敗 → 500
-- [x] sendMail失敗でも 201
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
-
-## POST /issues/:id/comments
-- [x] member は作成成功
-- [x] viewer は 403
-- [x] issue not found → 404
-- [x] comment 空 → 400
-- [x] insert失敗 → 500
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
-
-## GET /issues/:id/comments
-- [x] member は取得成功
-- [x] viewer は取得成功
-- [x] issue not found → 404
-- [x] 取得失敗 → 500
-
-## DELETE /issues/:issueId/comments/:commentId
-- [x] admin は削除成功
-- [x] member/viewer は 403
-- [x] comment not found → 404
-- [x] delete失敗 → 500
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
-
-## GET /issues/:id/checks
-- [x] member は取得成功
-- [x] viewer は取得成功
-- [x] issue not found → 404
-- [x] 取得失敗 → 500
-
-## POST /issues/:id/check
-- [x] member はcheck成功
-- [x] viewer はcheck成功
-- [x] issue not found → 404
-- [x] existing check 確認失敗 → 500
-- [x] 既にcheck済み → 200
-- [x] check作成失敗 → 500
-- [x] 成功時 auditLog が呼ばれる
-- [x] 失敗時 auditLog は呼ばれない
