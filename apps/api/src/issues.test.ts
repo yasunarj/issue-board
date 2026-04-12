@@ -123,6 +123,71 @@ const buildIssueInsertMock = () => ({
   })
 })
 
+const buildIssueStatusFoundMock = (status: string) => ({
+  select: () => ({
+    eq: () => ({
+      single: async () => ({
+        data: {
+          status: status,
+        },
+        error: null,
+      })
+    })
+  })
+})
+
+const buildIssueStatusUpdateResolvedSuccessMock = () => ({
+  ...buildIssueStatusFoundMock("open"),
+  update: () => ({
+    eq: () => ({
+      select: () => ({
+        single: async () => ({
+          data: {
+            id: "issue-1",
+            title: "Test Issue",
+            status: "resolved",
+          },
+          error: null
+        })
+      })
+    })
+  })
+})
+
+const buildIssueStatusUpdateOpenSuccessMock = () => ({
+  ...buildIssueStatusFoundMock("resolved"),
+  update: () => ({
+    eq: () => ({
+      select: () => ({
+        single: async () => ({
+          data: {
+            id: "issue-1",
+            title: "Test Issue",
+            status: "open",
+          },
+          error: null
+        })
+      })
+    })
+  })
+})
+
+const buildIssueStatusUpdateFailedMock = () => ({
+  ...buildIssueStatusFoundMock("open"),
+  update: () => ({
+    eq: () => ({
+      select: () => ({
+        single: async () => ({
+          data: null,
+          error: {
+            message: "DB update failed",
+          }
+        })
+      })
+    })
+  })
+})
+
 const buildProfileFoundMock = () => ({
   select: () => ({
     eq: () => ({
@@ -231,11 +296,33 @@ const buildIssueCommentFoundMock = () => ({
   })
 })
 
+const buildIssueCommentNotFoundMock = () => ({
+  select: () => ({
+    eq: () => ({
+      eq: () => ({
+        single: async () => ({
+          data: null,
+          error: { message: "comment not found" }
+        })
+      })
+    })
+  })
+})
+
 const buildIssueCommentDeleteSuccessMock = () => ({
   ...buildIssueCommentFoundMock(),
   delete: () => ({
     eq: async () => ({
       error: null,
+    })
+  })
+})
+
+const buildIssueCommentDeleteFailedMock = () => ({
+  ...buildIssueCommentFoundMock(),
+  delete: () => ({
+    eq: async () => ({
+      error: { message: "Failed to delete comment" }
     })
   })
 })
@@ -406,50 +493,9 @@ describe("app", () => {
   });
 
   it("open → resolved にトグルされる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { status: "open" },
-                error: null,
-              })
-            })
-          }),
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: {
-                    id: "issue-1",
-                    title: "Test Issue",
-                    status: "resolved",
-                  },
-                  error: null,
-                })
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  display_name: "Test User",
-                },
-                error: null,
-              })
-            })
-          })
-        }
-      }
-
-      return {};
+    mockTables({
+      issues: buildIssueStatusUpdateResolvedSuccessMock(),
+      profiles: buildProfileFoundMock()
     })
 
     const { createApp } = await import("./app");
@@ -473,47 +519,9 @@ describe("app", () => {
   });
 
   it("resolved -> open にトグルされる", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: { status: "resolved" },
-              })
-            })
-          }),
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: {
-                    id: "issue-1",
-                    status: "open",
-                  },
-                  error: null,
-                })
-              })
-            })
-          })
-        }
-      }
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  display_name: "Test User",
-                },
-                error: null,
-              })
-            })
-          })
-        }
-      }
-
-      return {};
+    mockTables({
+      issues: buildIssueStatusUpdateOpenSuccessMock(),
+      profiles: buildProfileFoundMock(),
     })
     const { createApp } = await import("./app");
     const app = createApp();
@@ -558,53 +566,10 @@ describe("app", () => {
   });
 
   it("update に失敗すると 500 を返す", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issues") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  status: "open",
-                  title: "Test Title",
-                },
-                error: null
-              }),
-            }),
-          }),
-          update: () => ({
-            eq: () => ({
-              select: () => ({
-                single: async () => ({
-                  data: null,
-                  error: {
-                    message: "DB update failed",
-                  }
-                })
-              })
-            })
-          })
-        }
-      }
-
-      if (table === "profiles") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  display_name: "Test User",
-                },
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-
-      return {};
-    });
-
+    mockTables({
+      issues: buildIssueStatusUpdateFailedMock(),
+      profiles: buildProfileFoundMock(),
+    })
     const { createApp } = await import("./app");
     const app = createApp();
 
@@ -1245,23 +1210,9 @@ describe("app", () => {
   })
 
   it("comment が見つからない場合 404 を返し auditLog は呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issue_comments") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: async () => ({
-                  data: null,
-                  error: { message: "comment not found" }
-                })
-              })
-            })
-          })
-        }
-      }
-      return {}
-    })
+    mockTables({
+      issue_comments: buildIssueCommentNotFoundMock(),
+    });
 
     const { createApp } = await import("./app");
     const app = createApp();
@@ -1280,32 +1231,8 @@ describe("app", () => {
   })
 
   it("comment の削除に失敗すると 500 を返し auditLog は呼ばれない", async () => {
-    fromMock.mockImplementation((table: string) => {
-      if (table === "issue_comments") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: async () => ({
-                  data: {
-                    id: "comment-2",
-                    issue_id: "issue-2",
-                    body: "Test comment-2"
-                  }
-                })
-              })
-            })
-          }),
-
-          delete: () => ({
-            eq: async () => ({
-              error: { message: "Failed to delete comment" }
-            })
-          })
-        }
-      }
-
-      return {}
+    mockTables({
+      issue_comments: buildIssueCommentDeleteFailedMock(),
     })
 
     const { createApp } = await import("./app");
@@ -1545,7 +1472,6 @@ describe("app", () => {
     expect(body.error).toBe("Failed to create check");
     expect(createAuditLog).not.toHaveBeenCalled();
   });
-
 })
 
 // checkのテスト４本に共通関数を当てることが可能、さらにhelper関数を３つ追加できるようなのでそこを追加して再度確認をしてもらう。

@@ -45,15 +45,77 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 # issue-borad
 
 
-<!-- 開発用 
+# issues routes 観点表
 
-git fetch --all --prune
-git push origin --delete feature/...
-git merge feature/...
-git checkout -b ...
+## PATCH /issues/:id/resolve
+- [x] open → resolved 成功
+- [x] resolved → open 成功
+- [x] issue not found → 404
+- [x] update失敗 → 500
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
 
+## DELETE /issues/:id
+- [x] admin は削除成功
+- [x] member/viewer は 403
+- [x] issue not found → 404
+- [x] delete失敗 → 500
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
 
-・実装が終わったら、のちにAI機能を搭載させる。
-https://chatgpt.com/c/69aeaad5-1ee0-83a5-87e6-ff8d8e451ae1
-・こちらのプロジェクトの実装が完了したらcodexにバトンタッチする。プロジェクトを読み込んで改善案・リファクタリング・テストをエージェントに実行してもらう
-・解決期限をテーブルに追加する。nodemailerが使用できるようになっているので、解決期限を過ぎた場合にはメールが届くように設定をする。またIssueに対して誰が担当をするかを入力する欄を設ける。
+## PATCH /issues/:id
+- [x] admin は更新成功
+- [x] member/viewer は 403
+- [x] issue not found → 404
+- [x] update失敗 → 500
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
+
+## POST /issues
+- [x] admin は作成成功
+- [x] member は作成成功
+- [x] viewer は 403
+- [x] title 空 → 400
+- [x] insert失敗 → 500
+- [x] sendMail失敗でも 201
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
+
+## POST /issues/:id/comments
+- [x] member は作成成功
+- [x] viewer は 403
+- [x] issue not found → 404
+- [x] comment 空 → 400
+- [x] insert失敗 → 500
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
+
+## GET /issues/:id/comments
+- [x] member は取得成功
+- [x] viewer は取得成功
+- [x] issue not found → 404
+- [x] 取得失敗 → 500
+
+## DELETE /issues/:issueId/comments/:commentId
+- [x] admin は削除成功
+- [x] member/viewer は 403
+- [x] comment not found → 404
+- [x] delete失敗 → 500
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
+
+## GET /issues/:id/checks
+- [x] member は取得成功
+- [x] viewer は取得成功
+- [x] issue not found → 404
+- [x] 取得失敗 → 500
+
+## POST /issues/:id/check
+- [x] member はcheck成功
+- [x] viewer はcheck成功
+- [x] issue not found → 404
+- [x] existing check 確認失敗 → 500
+- [x] 既にcheck済み → 200
+- [x] check作成失敗 → 500
+- [x] 成功時 auditLog が呼ばれる
+- [x] 失敗時 auditLog は呼ばれない
