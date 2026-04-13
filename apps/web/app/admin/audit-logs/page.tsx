@@ -43,30 +43,55 @@ const AuditLogPage = () => {
   }, [fetchLogs]);
 
   return (
-    <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Audit Logs</h1>
-          <Link href="/issues">一覧へ戻る</Link>
+    <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-8 flex items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div>
+            <p className="text-sm font-medium text-blue-700">管理者</p>
+            <h1 className="mt-1 text-3xl font-bold">Audit Logs</h1>
+          </div>
+          <Link
+            href="/issues"
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-blue-300 hover:text-blue-700"
+          >
+            一覧へ戻る
+          </Link>
         </div>
         {message && (
           <p
-            className={`mb-4 ${message.type === "error" ? "text-red-600" : "text-green-600"}`}
+            className={`mb-4 rounded-md border px-4 py-3 text-sm ${
+              message.type === "error"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-green-200 bg-green-50 text-green-700"
+            }`}
           >
             {message.text}
           </p>
         )}
         <div className="flex flex-col gap-4">
           {isLoading ? (
-            <p>読み込み中...</p>
+            <p className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+              読み込み中...
+            </p>
           ) : logs.length === 0 ? (
-            <div>ログがありません</div>
+            <div className="rounded-md border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+              ログがありません
+            </div>
           ) : (
             logs.map((log) => (
-              <div key={log.id} className="border p-3 rounded">
-                <div>{new Date(log.created_at).toLocaleString()}</div>
-                <div>{log.user_profile?.display_name ?? "不明"}</div>
-                <div>{formatAction(log.action)}</div>
+              <div
+                key={log.id}
+                className="rounded-md border border-slate-200 bg-white p-5 text-sm shadow-sm"
+              >
+                <div className="mb-2 text-xs text-slate-500">
+                  {new Date(log.created_at).toLocaleString()}
+                </div>
+                <div className="font-medium text-slate-900">
+                  {log.user_profile?.display_name ?? "不明"}
+                </div>
+                <div className="mt-2 text-slate-700">
+                  {formatAction(log.action)}
+                </div>
               </div>
             ))
           )}

@@ -12,7 +12,11 @@ type CommentListProps = {
   fetchComments: () => void;
 };
 
-const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) => {
+const CommentList = ({
+  comments,
+  setMessage,
+  fetchComments,
+}: CommentListProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { isAdmin } = useMe();
 
@@ -46,22 +50,34 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
     }
   };
   return (
-    <div className="border-t pt-4">
-      <h3 className="font-semibold mb-2">コメント</h3>
+    <div className="border-t border-slate-200 pt-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-semibold text-slate-900">コメント</h3>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+          {(comments ?? []).length}件
+        </span>
+      </div>
 
       {(comments ?? []).length === 0 ? (
-        <p className="text-sm text-gray-500">まだコメントはありません</p>
+        <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+          まだコメントはありません
+        </p>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {(comments ?? []).map((comment) => (
-            <div key={comment.id} className="border rounded p-3 bg-gray-900">
+            <div
+              key={comment.id}
+              className="rounded-md border border-slate-200 bg-slate-50 p-4"
+            >
               <div
-                className={`text-xs text-gray-600 mb-1 ${isAdmin ? "flex justify-between" : ""}`}
+                className={`mb-1 text-xs text-slate-500 ${
+                  isAdmin ? "flex items-center justify-between gap-3" : ""
+                }`}
               >
                 投稿者: {comment.user_profile?.display_name ?? "不明"}
                 {isAdmin && (
                   <button
-                    className="border rounded px-2 py-1 text-white text-xs"
+                    className="rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={() =>
                       handleCommentDelete(comment.issue_id, comment.id)
                     }
@@ -71,10 +87,12 @@ const CommentList = ({ comments, setMessage, fetchComments }: CommentListProps) 
                   </button>
                 )}
               </div>
-              <div className="text-xs text-gray-500 mb-2">
+              <div className="mb-3 text-xs text-slate-500">
                 {new Date(comment.created_at).toLocaleString("ja-JP")}
               </div>
-              <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">
+                {comment.body}
+              </p>
             </div>
           ))}
         </div>

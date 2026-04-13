@@ -9,31 +9,41 @@ type IssueCardProps = {
 const IssueCard = ({
   issue,
 }: IssueCardProps) => {
+  const isResolved = issue.status === "resolved";
+
   return (
     <>
       <div>
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold">{issue.title}</h2>
-          <div className="flex items-center gap-2">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">
+              {issue.title}
+            </h2>
+            <div className="mt-2 text-sm text-slate-500">
+              コメント: {issue.comment_count ?? 0}件
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href={`/issues/${issue.id}`}
-              className="text-xs underline underline-offset-4"
+              className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
             >
               詳細
             </Link>
 
-            <span className="text-sm border px-2 py-1 rounded">
-              {issue.status}
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                isResolved
+                  ? "bg-slate-100 text-slate-600"
+                  : "bg-green-50 text-green-700"
+              }`}
+            >
+              {isResolved ? "resolved" : "open"}
             </span>
           </div>
         </div>
 
-        <div className="text-sm text-gray-500 mb-2">
-          コメント: {issue.comment_count ?? 0}件
-        </div>
-
-
-        <div className="text-xs text-gray-600 flex flex-col gap-1">
+        <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500 sm:grid-cols-3">
           <span>
             作成者: {issue.created_by_profile?.display_name ?? "不明"}
           </span>

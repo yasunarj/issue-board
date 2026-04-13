@@ -83,19 +83,27 @@ const RegisterPage = () => {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="flex flex-col gap-4 w-80">
-        <h1>新規登録</h1>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10 text-slate-900">
+      <div className="w-full max-w-sm rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <p className="text-sm font-medium text-blue-700">社内 Issue 管理</p>
+          <h1 className="mt-1 text-3xl font-bold">新規登録</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            利用するアカウント情報を登録してください
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
         <input
           type="text"
-          className="border p-2"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           placeholder="表示名"
           onFocus={() => setMessage(null)}
           onChange={(e) => setDisplayName(e.target.value)}
         />
         <input
           type="email"
-          className="border p-2"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           placeholder="email"
           value={email}
           onFocus={() => setMessage(null)}
@@ -104,7 +112,7 @@ const RegisterPage = () => {
         <div className="flex gap-2">
           <input
             type={showPassword ? "text" : "password"}
-            className="border p-2 flex-1"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             value={password}
             placeholder="password"
             onFocus={() => setMessage(null)}
@@ -112,7 +120,7 @@ const RegisterPage = () => {
           />
           <button
             type="button"
-            className="border px-4"
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             onClick={() => setShowPassword((prev) => !prev)}
           >
             {showPassword ? "非表示" : "表示"}
@@ -120,27 +128,39 @@ const RegisterPage = () => {
         </div>
         <input
           type={showPassword ? "text" : "password"}
-          className="border p-2"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           value={passwordConfirm}
           placeholder="password確認"
           onFocus={() => setMessage(null)}
           onChange={(e) => setPasswordConfirm(e.target.value)}
         />
         <button
-          className="border p-2"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={handleRegister}
           disabled={isLoading}
         >
           {isLoading ? "登録中" : "登録する"}
         </button>
-        <p
-          className={`test-sm ${message?.type === "error" ? "text-red-600" : "text-green-600"}`}
+
+        {message && (
+          <p
+            className={`rounded-md border px-3 py-2 text-sm ${
+              message.type === "error"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-green-200 bg-green-50 text-green-700"
+            }`}
+          >
+            {message.text}
+          </p>
+        )}
+
+        <Link
+          href="/"
+          className="text-sm font-medium text-blue-700 hover:text-blue-800"
         >
-          {message?.text}
-        </p>
-        <Link href="/" className="text-sm underline">
           ログインページへ
         </Link>
+        </div>
       </div>
     </main>
   );

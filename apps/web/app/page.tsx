@@ -99,12 +99,20 @@ const Home = () => {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="flex flex-col gap-4 w-80">
-        <h1>Issue Board</h1>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10 text-slate-900">
+      <div className="w-full max-w-sm rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <p className="text-sm font-medium text-blue-700">社内 Issue 管理</p>
+          <h1 className="mt-1 text-3xl font-bold">Issue Board</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            アカウント情報を入力してログインしてください
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
         <input
           type="email"
-          className="border p-2"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           placeholder="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -113,13 +121,13 @@ const Home = () => {
         <div className="flex gap-2">
           <input
             type={showPassword ? "text" : "password"}
-            className="border p-2 flex-1"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             placeholder="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <button
-            className="border px-4"
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             onClick={() => setShowPassword((prev) => !prev)}
           >
             {showPassword ? "非表示" : "表示"}
@@ -127,25 +135,33 @@ const Home = () => {
         </div>
         {me ? (
           <button
-            className="bg-black text-white p-2 border"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
             onClick={handleLogout}
           >
             ログアウト
           </button>
         ) : (
           <button
-            className="bg-black text-white p-2 border"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={handleLogin}
           >
             {isLoading ? "ログイン中" : "ログイン"}
           </button>
         )}
 
-        <p>{message}</p>
+        {message && (
+          <p className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            {message}
+          </p>
+        )}
 
-        <Link href="/register" className="text-sm underline">
+        <Link
+          href="/register"
+          className="text-sm font-medium text-blue-700 hover:text-blue-800"
+        >
           新規登録はこちら
         </Link>
+        </div>
       </div>
     </main>
   );

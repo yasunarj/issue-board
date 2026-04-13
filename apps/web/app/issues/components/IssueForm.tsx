@@ -55,18 +55,23 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
     }
   };
   return (
-    <div className="border rounded p-4 mb-6 flex flex-col gap-3">
-      <h2 className="text-lg font-bold">Issue作成</h2>
+    <div className="mb-8 flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900">Issue作成</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          対応が必要な内容を登録してください
+        </p>
+      </div>
 
       <input
-        className="border rounded p-2"
+        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
         placeholder="タイトル"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
 
       <textarea
-        className="border rounded p-2 min-h-32"
+        className="min-h-32 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
         placeholder="詳細"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
@@ -74,14 +79,14 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
 
       <input
         type="date"
-        className="border rounded p-2 bg-black text-white scheme-dark"
+        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
         placeholder="詳細"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
       />
 
       <button
-        className="bg-black border text-white rounded p-2 disabled:opacity-50"
+        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleCreateIssue}
         disabled={isSubmitting}
       >
@@ -92,4 +97,3 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
 };
 
 export default IssueForm;
-
