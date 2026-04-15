@@ -21,6 +21,10 @@ const updateIssueSchema = z.object({
   dueDate: z.union([z.iso.date(), z.literal("")]).optional().transform((v) => (v === "" ? undefined : v))
 })
 
+const updateAssigneeSchema = z.object({
+  assignedTo: z.uuid({ error: "assigned to invalid" })
+})
+
 const createCommentSchema = z.object({
   comment: z.string().trim().min(1, "comment is required").max(1000, "comment too long"),
 });
@@ -260,6 +264,94 @@ issues.patch("/:id", requireRole(["admin"]), async (c) => {
   return c.json({
     message: "Issue updated",
     issue: data,
+  }, 200);
+})
+
+issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
+  const issueId = c.req.param("id");
+  const body = await c.req.json();
+  const user = c.get("user");
+
+  const result = updateAssigneeSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json({
+      error: result.error.issues[0]?.message ?? "Invalid request"
+    }, 400);
+  }
+
+  const { assignedTo } = result.data;
+
+  const { data: issue, error: issueError } = await supabaseAdmin
+  .from("issues")
+  .select("id, title, assigned_to")
+  .eq("id", issueId)
+  .single();
+
+  if (issueError || !issue) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
+  const { data: checkedUser, error: checkedUserError } = await supabaseAdmin
+  .from("issue_checks")
+  .select("id")
+  .eq("issue_id", issueId)
+  .eq("user_id", assignedTo)
+  .maybeSingle();
+
+  if (checkedUserError) {
+    console.error(checkedUserError);
+    return c.json({ error: "Failed to verify checked user" }, 500);
+  }
+
+  if (!checkedUser) {
+    return c.json({ error: "Assignee must be a checked user" }, 400);
+  }
+
+  const { data: assigneeProfile, error: assigneeProfileError } = await supabaseAdmin
+  .from("profiles")
+  .select("id, display_name")
+  .eq("id", assignedTo)
+  .single();
+
+  if (assigneeProfileError || !assigneeProfile) {
+    return c.json({ error: "Assignee not found" }, 404);
+  }
+
+  const { data, error } = await supabaseAdmin
+  .from("issues")
+  .update({
+    assigned_to: assignedTo,
+    updated_at: new Date().toISOString(),
+    reminder_3days_sent_at: null,
+    reminder_due_sent_at: null,
+  })
+  .eq("id", issueId)
+  .select()
+  .single();
+
+  if ( error ) {
+    console.error(error);
+    return c.json({ error: "Failed to update issue assignee" }, 500);
+  }
+
+  await createAuditLog({
+    userId: user.id,
+    action: "issue.assign",
+    targetType: "issue",
+    targetId: data.id,
+    issueId: data.id,
+    detail: {
+      previous_assigned_to: issue.assigned_to ?? null,
+      assigned_to: assignedTo,
+      assignee_display_name: assigneeProfile.display_name ?? null
+    }
+  })
+
+  return c.json({
+    message: "Issue assignee updated",
+    issue: data,
+    assignedUser: assigneeProfile.display_name
   }, 200);
 })
 
@@ -624,3 +716,6 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
 });
 
 export default issues;
+
+// 解決担当者が決定した際のapiの実装はOKあとはその担当者に即時メールを送るためのsendMailを追加していくが、
+// 取得したissueの何の情報をメールに添付するのかを決める。
