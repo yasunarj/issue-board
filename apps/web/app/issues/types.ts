@@ -20,6 +20,7 @@ export type IssueDetail = {
   title: string;
   description: string;
   status: "open" | "resolved";
+  assigned_to: string | null;
   due_date: string | null;
   resolved_at: string | null;
   created_at: string;
@@ -28,6 +29,7 @@ export type IssueDetail = {
   resolved_by: string | null;
   created_by_profile: ProfileRef | null;
   resolved_by_profile: ProfileRef | null;
+  assigned_to_profile: ProfileRef | null;
 };
 
 export type IssueComment = {

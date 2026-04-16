@@ -146,6 +146,7 @@ issues.get("/:id", requireRole(["admin", "member", "viewer"]), async (c) => {
       updated_at,
       created_by,
       resolved_by,
+      assigned_to,
       created_by_profile:profiles!issues_created_by_fkey (
         id,
         role,
@@ -154,6 +155,11 @@ issues.get("/:id", requireRole(["admin", "member", "viewer"]), async (c) => {
       resolved_by_profile:profiles!issues_resolved_by_fkey (
         id,
         role
+      ),
+      assigned_to_profile:profiles!issues_assigned_to_fkey (
+        id,
+        role,
+        display_name
       )
     `)
     .eq("id", issueId)

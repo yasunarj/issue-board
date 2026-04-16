@@ -10,6 +10,7 @@ import { useMe } from "@/app/hooks/useMe";
 import { formatAction } from "@/app/lib/formatAction";
 import { apiFetch } from "@/app/lib/api/client";
 import { useIssueDetail } from "../hooks/useIssueDetail";
+import AssigneeSection from "../components/AssigneeSection";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
@@ -29,6 +30,9 @@ const IssueDetailPage = () => {
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isShowAuditLogs, setIsShowAuditLogs] = useState<boolean>(false);
+
+  const [selectedAssignee, setSelectedAssignee] = useState<string>("");
+  const [isUpdatingAssignee, setIsUpdatingAssignee] = useState<boolean>(false);
 
   const fetchAuditLogs = useCallback(async () => {
     if (!isAdmin) return;
@@ -93,6 +97,7 @@ const IssueDetailPage = () => {
     setEditTitle(issue.title);
     setEditDescription(issue.description);
     setEditDueDate(issue.due_date ?? "");
+    setSelectedAssignee(issue.assigned_to ?? "");
   }, [issue]);
 
   const handleUpdateIssue = async () => {
@@ -134,6 +139,50 @@ const IssueDetailPage = () => {
       setIsUpdating(false);
     }
   };
+
+  const handleUpdateAssignee = async () => {
+    if (!selectedAssignee) {
+      setMessage({ text: "解決担当者を選択してください", type: "error" });
+      return;
+    }
+
+    setIsUpdatingAssignee(true);
+
+    try {
+      const res = await apiFetch(`/issues/${issueId}/assignee`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ assignedTo: selectedAssignee }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.error ?? "担当者の設定に失敗しました",
+          type: "error",
+        });
+        return;
+      }
+
+      setMessage({
+        text: `${data.assignedUser ?? "担当者"}を設定しました`,
+        type: "success",
+      });
+
+      await fetchIssue();
+    } catch (e) {
+      setMessage({
+        text: e instanceof Error ? e.message : "担当者の設定に失敗しました",
+        type: "error",
+      });
+    } finally {
+      setIsUpdatingAssignee(false);
+    }
+  };
+  console.log("確認", issue?.assigned_to_profile);
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
@@ -299,6 +348,16 @@ const IssueDetailPage = () => {
               onCheck={handleCheckIssue}
               resultMessage={checkMessage ?? null}
             />
+            {isAdmin && (
+              <AssigneeSection
+                currentAssigneeName={issue.assigned_to_profile?.display_name ?? null}
+                selectedAssignee={selectedAssignee}
+                setSelectedAssignee={setSelectedAssignee}
+                onAssignee={handleUpdateAssignee}
+                checks={checks ?? []}
+                isUpdatingAssignee={isUpdatingAssignee}
+              />
+            )}
             <CommentForm
               issueId={issueId}
               value={commentInput}
