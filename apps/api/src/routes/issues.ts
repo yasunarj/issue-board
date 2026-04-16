@@ -5,7 +5,7 @@ import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/requireRole";
 import type { AppEnv } from "../app";
 import { createAuditLog } from "../lib/auditLog";
-import { sendMail } from "../lib/sendMail";
+import { sendMail, sendNotifyMail } from "../lib/sendMail";
 
 const issues = new Hono<AppEnv>();
 
@@ -106,7 +106,7 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
   });
 
   try {
-    await sendMail({
+    await sendNotifyMail({
       subject: `[Issue Board] 新しいIssueが作成されました`,
       text: `
       新しいIssueが作成されました
@@ -283,21 +283,27 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
   const { assignedTo } = result.data;
 
   const { data: issue, error: issueError } = await supabaseAdmin
-  .from("issues")
-  .select("id, title, assigned_to")
-  .eq("id", issueId)
-  .single();
+    .from("issues")
+    .select(`
+      id,
+      title,
+      due_date,
+      assigned_to,
+      created_by_profile:profiles!issues_created_by_fkey ( display_name )
+    `)
+    .eq("id", issueId)
+    .single();
 
   if (issueError || !issue) {
     return c.json({ error: "Issue not found" }, 404);
   }
 
   const { data: checkedUser, error: checkedUserError } = await supabaseAdmin
-  .from("issue_checks")
-  .select("id")
-  .eq("issue_id", issueId)
-  .eq("user_id", assignedTo)
-  .maybeSingle();
+    .from("issue_checks")
+    .select("id")
+    .eq("issue_id", issueId)
+    .eq("user_id", assignedTo)
+    .maybeSingle();
 
   if (checkedUserError) {
     console.error(checkedUserError);
@@ -309,28 +315,28 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
   }
 
   const { data: assigneeProfile, error: assigneeProfileError } = await supabaseAdmin
-  .from("profiles")
-  .select("id, display_name")
-  .eq("id", assignedTo)
-  .single();
+    .from("profiles")
+    .select("id, display_name")
+    .eq("id", assignedTo)
+    .single();
 
   if (assigneeProfileError || !assigneeProfile) {
     return c.json({ error: "Assignee not found" }, 404);
   }
 
   const { data, error } = await supabaseAdmin
-  .from("issues")
-  .update({
-    assigned_to: assignedTo,
-    updated_at: new Date().toISOString(),
-    reminder_3days_sent_at: null,
-    reminder_due_sent_at: null,
-  })
-  .eq("id", issueId)
-  .select()
-  .single();
+    .from("issues")
+    .update({
+      assigned_to: assignedTo,
+      updated_at: new Date().toISOString(),
+      reminder_3days_sent_at: null,
+      reminder_due_sent_at: null,
+    })
+    .eq("id", issueId)
+    .select()
+    .single();
 
-  if ( error ) {
+  if (error) {
     console.error(error);
     return c.json({ error: "Failed to update issue assignee" }, 500);
   }
@@ -347,6 +353,34 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
       assignee_display_name: assigneeProfile.display_name ?? null
     }
   })
+
+  try {
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(assignedTo);
+    const email = userData.user?.email;
+    const issueUrl = `${process.env.APP_BASE_URL}/issues/${issueId}`
+
+    if (!email) {
+      throw new Error("担当者のメールアドレスが見つかりません");
+    }
+
+    await sendMail({
+      to: email,
+      subject: `[Issue Board] 担当者に設定されました`,
+      text: `
+      あなたが Issue の担当者に設定されました。
+
+      タイトル: ${issue.title}
+      期限: ${issue.due_date ?? "なし"}
+
+      対応をお願いします。
+
+      詳細はこちら:
+      ${issueUrl}
+      `.trim(),
+    })
+  } catch (mailError) {
+    console.error("メール送信失", mailError);
+  }
 
   return c.json({
     message: "Issue assignee updated",
@@ -404,7 +438,7 @@ issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
   })
 
   try {
-    await sendMail({
+    await sendNotifyMail({
       subject: newStatus === "resolved"
         ? "【Issue Board】Issueが解決されました"
         : "【Issue Board】Issueが未解決に戻されました",
@@ -717,5 +751,3 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
 
 export default issues;
 
-// 解決担当者が決定した際のapiの実装はOKあとはその担当者に即時メールを送るためのsendMailを追加していくが、
-// 取得したissueの何の情報をメールに添付するのかを決める。
