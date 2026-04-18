@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import auditLogs from "./routes/auditLogs";
 import issues from "./routes/issues";
 import me from "./routes/me";
+import internal from "./routes/internal";
 
 export type Role = "member" | "admin" | "viewer";
 
@@ -31,6 +32,7 @@ export const createApp = () => {
   app.route("/me", me);
   app.route("/issues", issues);
   app.route("/audit-logs", auditLogs);
+  app.route("/internal", internal);
 
   return app;
 };
