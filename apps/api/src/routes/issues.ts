@@ -6,6 +6,7 @@ import { requireRole } from "../middleware/requireRole";
 import type { AppEnv } from "../app";
 import { createAuditLog } from "../lib/auditLog";
 import { sendMail, sendNotifyMail } from "../lib/sendMail";
+import { buildIssueMailTemplate } from "../lib/issueMailTemplate";
 
 const issues = new Hono<AppEnv>();
 
@@ -106,16 +107,22 @@ issues.post("/", requireRole(["member", "admin"]), async (c) => {
   });
 
   try {
+    const issueUrl = `${process.env.APP_BASE_URL}/issues/${data.id}`;
+    const mailTemplate = buildIssueMailTemplate({
+      notificationType: "新規Issue作成通知",
+      headline: "新しいIssueが作成されました。",
+      issueTitle: data.title,
+      dueDate: data.due_date,
+      createdByName: profile?.display_name ?? "不明",
+      issueUrl,
+      action: "内容を確認し、必要に応じて担当者の設定や対応方針の確認を行ってください。",
+      description: data.description,
+    });
+
     await sendNotifyMail({
-      subject: `[Issue Board] 新しいIssueが作成されました`,
-      text: `
-      新しいIssueが作成されました
-  
-      タイトル: ${data.title}
-      期限: ${data.due_date ?? "なし"}
-      内容： ${data.description}
-      作成者: ${profile?.display_name ?? "不明"}
-      `.trim(),
+      subject: `[Issue Board] 新規Issue作成: ${data.title}`,
+      text: mailTemplate.text,
+      html: mailTemplate.html,
     })
   } catch (mailError) {
     console.error("メール送信失敗", mailError)
@@ -369,20 +376,21 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
       throw new Error("担当者のメールアドレスが見つかりません");
     }
 
+    const mailTemplate = buildIssueMailTemplate({
+      notificationType: "担当者設定通知",
+      headline: "あなたがIssueの担当者に設定されました。",
+      issueTitle: issue.title,
+      dueDate: issue.due_date,
+      assigneeName: assigneeProfile.display_name,
+      issueUrl,
+      action: "詳細ページで内容と期限を確認し、対応を開始してください。",
+    });
+
     await sendMail({
       to: email,
-      subject: `[Issue Board] 担当者に設定されました`,
-      text: `
-      あなたが Issue の担当者に設定されました。
-
-      タイトル: ${issue.title}
-      期限: ${issue.due_date ?? "なし"}
-
-      対応をお願いします。
-
-      詳細はこちら:
-      ${issueUrl}
-      `.trim(),
+      subject: `[Issue Board] 担当者設定: ${issue.title}`,
+      text: mailTemplate.text,
+      html: mailTemplate.html,
     })
   } catch (mailError) {
     console.error("メール送信失", mailError);
@@ -756,4 +764,3 @@ issues.get("/:id/audit-logs", requireRole(["admin"]), async (c) => {
 });
 
 export default issues;
-

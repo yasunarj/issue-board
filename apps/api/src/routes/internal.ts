@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { AppEnv } from "../app";
 import { supabaseAdmin } from "../lib/supabase";
 import { sendMail } from "../lib/sendMail";
+import { buildIssueMailTemplate } from "../lib/issueMailTemplate";
 
 const internal = new Hono<AppEnv>();
 
@@ -70,22 +71,83 @@ internal.get("/reminders/run", async (c) => {
     }
   }).filter((issue) => issue.shouldSend3Days || issue.shouldSendDue);
 
-  for(const target of targets ) {
-    target.reminder_3days_sent_at
+  let sentCount = 0;
+  let skippedCount = 0;
+
+  for (const target of targets) {
     const userResult = await supabaseAdmin.auth.admin.getUserById(target.assigned_to);
     const email = userResult.data.user?.email;
 
-    sendMail({
-      to: email ?? "",
-      subject: "",
-      text: `
-      ` 
-    })
+    if (!email) {
+      skippedCount += 1;
+      continue;
+    };
+
+    const issueUrl = `${process.env.APP_BASE_URL}/issues/${target.id}`
+    const assigneeName = target.assigned_to_profile?.[0]?.display_name;
+
+    const subject = target.shouldSend3Days
+      ? `[Issue Board] 期限3日前: ${target.title}`
+      : `[Issue Board] 期限当日: ${target.title}`;
+
+    const mailTemplate = target.shouldSend3Days
+      ? buildIssueMailTemplate({
+        notificationType: "期限3日前リマインド",
+        headline: "担当Issueの期限が3日後に近づいています。",
+        issueTitle: target.title,
+        dueDate: target.due_date,
+        assigneeName,
+        issueUrl,
+        action: "詳細ページで対応状況を確認し、期限までに完了できるよう対応を進めてください。",
+      })
+      : buildIssueMailTemplate({
+        notificationType: "期限当日リマインド",
+        headline: "担当Issueの期限は本日です。",
+        issueTitle: target.title,
+        dueDate: target.due_date,
+        assigneeName,
+        issueUrl,
+        action: "本日中に対応状況を確認し、完了または必要な更新を行ってください。",
+      });
+
+    try {
+      await sendMail({
+        to: email,
+        subject,
+        text: mailTemplate.text,
+        html: mailTemplate.html,
+      })
+
+      if (target.shouldSend3Days) {
+        await supabaseAdmin
+          .from("issues")
+          .update({
+            reminder_3days_sent_at: new Date().toISOString(),
+          })
+          .eq("id", target.id)
+      }
+
+      if (target.shouldSendDue) {
+        await supabaseAdmin
+          .from("issues")
+          .update({
+            reminder_due_sent_at: new Date().toISOString(),
+          })
+          .eq("id", target.id)
+      }
+
+      sentCount += 1;
+    } catch (mailError) {
+      console.error("メール送信失敗", mailError);
+      skippedCount += 1;
+    }
   }
 
   return c.json({
     message: "Reminder check completed",
     targets,
+    sentCount,
+    skippedCount,
   }, 200);
 });
 

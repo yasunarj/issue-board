@@ -12,9 +12,10 @@ type SendMailArgs = {
   to: string,
   subject: string;
   text: string;
+  html?: string;
 };
 
-export const sendMail = async ({ to, subject, text }: SendMailArgs) => {
+export const sendMail = async ({ to, subject, text, html }: SendMailArgs) => {
   if (!process.env.NOTIFY_TO) {
     throw new Error("NOTIFY_TO is not set");
   }
@@ -24,12 +25,14 @@ export const sendMail = async ({ to, subject, text }: SendMailArgs) => {
     to,
     subject,
     text,
+    html,
   })
 }
 
 export const sendNotifyMail = async ({
   subject,
   text,
+  html,
 }: Omit<SendMailArgs, "to">) => {
   if (!process.env.NOTIFY_TO) {
     throw new Error("NOTIFY_TO is not set")
@@ -39,5 +42,6 @@ export const sendNotifyMail = async ({
     to: process.env.NOTIFY_TO,
     subject,
     text,
+    html,
   })
 }

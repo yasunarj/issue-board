@@ -37,6 +37,7 @@ const sendMailMock = vi.fn().mockRejectedValue(undefined);
 vi.mock("./lib/sendMail", () => {
   return {
     sendMail: sendMailMock,
+    sendNotifyMail: sendMailMock,
   }
 })
 
