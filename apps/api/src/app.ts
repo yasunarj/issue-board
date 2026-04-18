@@ -1,10 +1,10 @@
 import { User } from "@supabase/supabase-js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import auditLogs from "./routes/auditLogs";
-import issues from "./routes/issues";
+import auditLogs from "./routes/auditLogs.js";
+import issues from "./routes/issues.js";
 import me from "./routes/me";
-import internal from "./routes/internal";
+import internal from "./routes/internal.js";
 
 export type Role = "member" | "admin" | "viewer";
 
