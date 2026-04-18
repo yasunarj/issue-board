@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import auditLogs from "./routes/auditLogs.js";
 import issues from "./routes/issues.js";
-import me from "./routes/me";
+import me from "./routes/me.js";
 import internal from "./routes/internal.js";
 
 export type Role = "member" | "admin" | "viewer";
