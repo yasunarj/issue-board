@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { AppEnv } from "../app";
-import { supabaseAdmin } from "../lib/supabase";
-import { sendMail } from "../lib/sendMail";
-import { buildIssueMailTemplate } from "../lib/issueMailTemplate";
+import { supabaseAdmin } from "../lib/supabase.js";
+import { sendMail } from "../lib/sendMail.js";
+import { buildIssueMailTemplate } from "../lib/issueMailTemplate.js";
 
 const internal = new Hono<AppEnv>();
 

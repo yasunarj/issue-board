@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { createAuditLog } from "./lib/auditLog";
+import { createAuditLog } from "./lib/auditLog.js";
 
 type AppLike = {
   fetch: (request: Request) => Response | Promise<Response>

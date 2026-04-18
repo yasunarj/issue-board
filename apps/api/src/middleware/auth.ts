@@ -1,5 +1,5 @@
 import { MiddlewareHandler } from "hono";
-import { supabaseAdmin } from "../lib/supabase";
+import { supabaseAdmin } from "../lib/supabase.js";
 import { Context, Next } from "hono";
 import type { AppEnv, Role } from "../app";
 

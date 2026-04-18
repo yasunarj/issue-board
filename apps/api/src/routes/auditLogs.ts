@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { requireRole } from "../middleware/requireRole";
-import { supabaseAdmin } from "../lib/supabase";
-import { authMiddleware } from "../middleware/auth";
+import { requireRole } from "../middleware/requireRole.js";
+import { supabaseAdmin } from "../lib/supabase.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 const auditLogs = new Hono();
 

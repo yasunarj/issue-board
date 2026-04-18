@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { Hono } from "hono";
-import { supabaseAdmin } from "../lib/supabase";
+import { supabaseAdmin } from "../lib/supabase.js";
 import { User } from "@supabase/supabase-js";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware } from "../middleware/auth.js";
 
 type Variables = {
   user: User;

@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { supabaseAdmin } from "../lib/supabase";
-import { authMiddleware } from "../middleware/auth";
-import { requireRole } from "../middleware/requireRole";
+import { supabaseAdmin } from "../lib/supabase.js";
+import { authMiddleware } from "../middleware/auth.js";
+import { requireRole } from "../middleware/requireRole.js";
 import type { AppEnv } from "../app";
-import { createAuditLog } from "../lib/auditLog";
-import { sendMail, sendNotifyMail } from "../lib/sendMail";
-import { buildIssueMailTemplate } from "../lib/issueMailTemplate";
+import { createAuditLog } from "../lib/auditLog.js";
+import { sendMail, sendNotifyMail } from "../lib/sendMail.js";
+import { buildIssueMailTemplate } from "../lib/issueMailTemplate.js";
 
 const issues = new Hono<AppEnv>();
 
