@@ -22,7 +22,10 @@ export const createApp = () => {
   app.use(
     "*",
     cors({
-      origin: "http://localhost:3000",
+      origin: [
+        "http://localhost:3000",
+        "https://issue-board-web-umber.wercel.app",
+      ],
       allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
     }),
