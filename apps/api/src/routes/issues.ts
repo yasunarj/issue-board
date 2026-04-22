@@ -280,144 +280,147 @@ issues.patch("/:id", requireRole(["admin"]), async (c) => {
   }, 200);
 })
 
+// issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
+//   const issueId = c.req.param("id");
+//   const body = await c.req.json();
+//   const user = c.get("user");
+
+//   console.log("assignee: parsed request body");
+
+//   const result = updateAssigneeSchema.safeParse(body);
+
+//   if (!result.success) {
+//     return c.json({
+//       error: result.error.issues[0]?.message ?? "Invalid request"
+//     }, 400);
+//   }
+
+//   const { assignedTo } = result.data;
+
+//   console.log("assignee: before issue select");
+
+//   const { data: issue, error: issueError } = await supabaseAdmin
+//     .from("issues")
+//     .select(`
+//       id,
+//       title,
+//       due_date,
+//       assigned_to,
+//       created_by_profile:profiles!issues_created_by_fkey ( display_name )
+//     `)
+//     .eq("id", issueId)
+//     .single();
+
+//   console.log("assignee: after issue select");
+
+//   if (issueError || !issue) {
+//     return c.json({ error: "Issue not found" }, 404);
+//   }
+
+//   const { data: checkedUser, error: checkedUserError } = await supabaseAdmin
+//     .from("issue_checks")
+//     .select("id")
+//     .eq("issue_id", issueId)
+//     .eq("user_id", assignedTo)
+//     .maybeSingle();
+
+//   console.log("assignee: after checked user lookup");
+
+//   if (checkedUserError) {
+//     console.error(checkedUserError);
+//     return c.json({ error: "Failed to verify checked user" }, 500);
+//   }
+
+//   if (!checkedUser) {
+//     return c.json({ error: "Assignee must be a checked user" }, 400);
+//   }
+
+//   const { data: assigneeProfile, error: assigneeProfileError } = await supabaseAdmin
+//     .from("profiles")
+//     .select("id, display_name")
+//     .eq("id", assignedTo)
+//     .single();
+
+//   console.log("assignee: after profile lookup");
+
+//   if (assigneeProfileError || !assigneeProfile) {
+//     return c.json({ error: "Assignee not found" }, 404);
+//   }
+
+//   const { data, error } = await supabaseAdmin
+//     .from("issues")
+//     .update({
+//       assigned_to: assignedTo,
+//       updated_at: new Date().toISOString(),
+//       reminder_3days_sent_at: null,
+//       reminder_due_sent_at: null,
+//     })
+//     .eq("id", issueId)
+//     .select()
+//     .single();
+
+//   console.log("assignee: after issue update");
+
+//   if (error) {
+//     console.error(error);
+//     return c.json({ error: "Failed to update issue assignee" }, 500);
+//   }
+
+//   await createAuditLog({
+//     userId: user.id,
+//     action: "issue.assign",
+//     targetType: "issue",
+//     targetId: data.id,
+//     issueId: data.id,
+//     detail: {
+//       previous_assigned_to: issue.assigned_to ?? null,
+//       assigned_to: assignedTo,
+//       assignee_display_name: assigneeProfile.display_name ?? null
+//     }
+//   })
+
+//   console.log("assignee: after audit log");
+
+//   try {
+//     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(assignedTo);
+//     const email = userData.user?.email;
+//     const issueUrl = `${process.env.APP_BASE_URL}/issues/${issueId}`
+
+//     if (!email) {
+//       throw new Error("担当者のメールアドレスが見つかりません");
+//     }
+
+//     const mailTemplate = buildIssueMailTemplate({
+//       notificationType: "担当者設定通知",
+//       headline: "あなたがIssueの担当者に設定されました。",
+//       issueTitle: issue.title,
+//       dueDate: issue.due_date,
+//       assigneeName: assigneeProfile.display_name,
+//       issueUrl,
+//       action: "詳細ページで内容と期限を確認し、対応を開始してください。",
+//     });
+
+//     await sendMail({
+//       to: email,
+//       subject: `[Issue Board] 担当者設定: ${issue.title}`,
+//       text: mailTemplate.text,
+//       html: mailTemplate.html,
+//     })
+//   } catch (mailError) {
+//     console.error("メール送信失", mailError);
+//   }
+
+// console.log("assignee: before response");
+
+//   return c.json({
+//     message: "Issue assignee updated",
+//     issue: data,
+//     assignedUser: assigneeProfile.display_name
+//   }, 200);
+// })
 issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
-  const issueId = c.req.param("id");
-  const body = await c.req.json();
-  const user = c.get("user");
-
-  console.log("assignee: parsed request body");
-
-  const result = updateAssigneeSchema.safeParse(body);
-
-  if (!result.success) {
-    return c.json({
-      error: result.error.issues[0]?.message ?? "Invalid request"
-    }, 400);
-  }
-
-  const { assignedTo } = result.data;
-
-  console.log("assignee: before issue select");
-
-  const { data: issue, error: issueError } = await supabaseAdmin
-    .from("issues")
-    .select(`
-      id,
-      title,
-      due_date,
-      assigned_to,
-      created_by_profile:profiles!issues_created_by_fkey ( display_name )
-    `)
-    .eq("id", issueId)
-    .single();
-
-  console.log("assignee: after issue select");
-
-  if (issueError || !issue) {
-    return c.json({ error: "Issue not found" }, 404);
-  }
-
-  const { data: checkedUser, error: checkedUserError } = await supabaseAdmin
-    .from("issue_checks")
-    .select("id")
-    .eq("issue_id", issueId)
-    .eq("user_id", assignedTo)
-    .maybeSingle();
-
-  console.log("assignee: after checked user lookup");
-
-  if (checkedUserError) {
-    console.error(checkedUserError);
-    return c.json({ error: "Failed to verify checked user" }, 500);
-  }
-
-  if (!checkedUser) {
-    return c.json({ error: "Assignee must be a checked user" }, 400);
-  }
-
-  const { data: assigneeProfile, error: assigneeProfileError } = await supabaseAdmin
-    .from("profiles")
-    .select("id, display_name")
-    .eq("id", assignedTo)
-    .single();
-
-  console.log("assignee: after profile lookup");
-
-  if (assigneeProfileError || !assigneeProfile) {
-    return c.json({ error: "Assignee not found" }, 404);
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from("issues")
-    .update({
-      assigned_to: assignedTo,
-      updated_at: new Date().toISOString(),
-      reminder_3days_sent_at: null,
-      reminder_due_sent_at: null,
-    })
-    .eq("id", issueId)
-    .select()
-    .single();
-
-  console.log("assignee: after issue update");
-
-  if (error) {
-    console.error(error);
-    return c.json({ error: "Failed to update issue assignee" }, 500);
-  }
-
-  await createAuditLog({
-    userId: user.id,
-    action: "issue.assign",
-    targetType: "issue",
-    targetId: data.id,
-    issueId: data.id,
-    detail: {
-      previous_assigned_to: issue.assigned_to ?? null,
-      assigned_to: assignedTo,
-      assignee_display_name: assigneeProfile.display_name ?? null
-    }
-  })
-
-  console.log("assignee: after audit log");
-
-  try {
-    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(assignedTo);
-    const email = userData.user?.email;
-    const issueUrl = `${process.env.APP_BASE_URL}/issues/${issueId}`
-
-    if (!email) {
-      throw new Error("担当者のメールアドレスが見つかりません");
-    }
-
-    const mailTemplate = buildIssueMailTemplate({
-      notificationType: "担当者設定通知",
-      headline: "あなたがIssueの担当者に設定されました。",
-      issueTitle: issue.title,
-      dueDate: issue.due_date,
-      assigneeName: assigneeProfile.display_name,
-      issueUrl,
-      action: "詳細ページで内容と期限を確認し、対応を開始してください。",
-    });
-
-    await sendMail({
-      to: email,
-      subject: `[Issue Board] 担当者設定: ${issue.title}`,
-      text: mailTemplate.text,
-      html: mailTemplate.html,
-    })
-  } catch (mailError) {
-    console.error("メール送信失", mailError);
-  }
-
-console.log("assignee: before response");
-
-  return c.json({
-    message: "Issue assignee updated",
-    issue: data,
-    assignedUser: assigneeProfile.display_name
-  }, 200);
-})
+  return c.json({ ok: true, step: "start" }, 200);
+});
 
 issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
   const id = c.req.param("id");
