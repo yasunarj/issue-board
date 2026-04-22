@@ -2,6 +2,7 @@
 
 import {  Dispatch, SetStateAction, useState } from "react";
 import { apiFetch } from "@/app/lib/api/client";
+import LoadingButton from "@/app/components/LoadingButton";
 
 type IssueForm = {
   onCreatedIssue: () => Promise<void>;
@@ -85,13 +86,14 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         onChange={(e) => setDueDate(e.target.value)}
       />
 
-      <button
+      <LoadingButton
         className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleCreateIssue}
-        disabled={isSubmitting}
+        isLoading={isSubmitting}
+        loadingText="作成中..."
       >
-        {isSubmitting ? "作成中..." : "Issueを追加"}
-      </button>
+        Issueを追加
+      </LoadingButton>
     </div>
   );
 };

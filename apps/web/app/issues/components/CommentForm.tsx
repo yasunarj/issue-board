@@ -1,5 +1,7 @@
 "use client";
 
+import LoadingButton from "@/app/components/LoadingButton";
+
 type CommentFormProps = {
   issueId: string;
   value: string;
@@ -23,13 +25,14 @@ const CommentForm = ({
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
       />
-      <button
+      <LoadingButton
         className="self-start rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => onSubmitting(issueId)}
-        disabled={isSubmitting}
+        isLoading={isSubmitting}
+        loadingText="投稿中..."
       >
-        {isSubmitting ? "投稿中" : "コメントを投稿"}
-      </button>
+        コメントを投稿
+      </LoadingButton>
     </div>
   );
 };

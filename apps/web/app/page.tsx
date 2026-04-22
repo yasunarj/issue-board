@@ -8,6 +8,7 @@ import Link from "next/link";
 import { apiFetch } from "./lib/api/client";
 import { mapMeResponse } from "./lib/api/getMe";
 import type { ApiMeResponse, Me } from "./issues/types";
+import LoadingButton from "./components/LoadingButton";
 
 const loginSchema = z.object({
   email: z.email("メール形式が正しくありません"),
@@ -21,6 +22,7 @@ const Home = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
 
   const init = useCallback(async () => {
@@ -88,6 +90,7 @@ const Home = () => {
   };
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await supabase.auth.signOut();
       setMe(null);
@@ -95,6 +98,8 @@ const Home = () => {
     } catch (e) {
       console.error(e);
       setMessage("ログアウトできませんでした");
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -134,19 +139,23 @@ const Home = () => {
           </button>
         </div>
         {me ? (
-          <button
+          <LoadingButton
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
             onClick={handleLogout}
+            isLoading={isLoggingOut}
+            loadingText="ログアウト中..."
           >
             ログアウト
-          </button>
+          </LoadingButton>
         ) : (
-          <button
+          <LoadingButton
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={handleLogin}
+            isLoading={isLoading}
+            loadingText="ログイン中..."
           >
-            {isLoading ? "ログイン中" : "ログイン"}
-          </button>
+            ログイン
+          </LoadingButton>
         )}
 
         {message && (

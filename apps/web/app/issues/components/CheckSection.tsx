@@ -1,11 +1,13 @@
 "use client";
 import type { IssueCheck } from "../types";
+import LoadingButton from "@/app/components/LoadingButton";
 
 type CheckSectionProps = {
   issueId: string;
   checks: IssueCheck[];
   onCheck: (id: string) => void;
   resultMessage: string | null;
+  isChecking: boolean;
 };
 
 const CheckSection = ({
@@ -13,17 +15,20 @@ const CheckSection = ({
   checks,
   onCheck,
   resultMessage,
+  isChecking,
 }: CheckSectionProps) => {
   return (
     <div className="border-t border-slate-200 pt-4 text-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        <LoadingButton
           type="button"
           className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
           onClick={() => onCheck(issueId)}
+          isLoading={isChecking}
+          loadingText="確認中..."
         >
           見ました
-        </button>
+        </LoadingButton>
 
         <span className="text-slate-600">確認済み: {checks.length}人</span>
 

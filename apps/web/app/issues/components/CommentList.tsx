@@ -3,6 +3,7 @@ import { Dispatch, SetStateAction, useState } from "react";
 import type { IssueComment } from "../types";
 import { useMe } from "@/app/hooks/useMe";
 import { apiFetch } from "@/app/lib/api/client";
+import LoadingButton from "@/app/components/LoadingButton";
 
 type CommentListProps = {
   comments: IssueComment[];
@@ -76,15 +77,16 @@ const CommentList = ({
               >
                 投稿者: {comment.user_profile?.display_name ?? "不明"}
                 {isAdmin && (
-                  <button
+                  <LoadingButton
                     className="rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={() =>
                       handleCommentDelete(comment.issue_id, comment.id)
                     }
-                    disabled={deletingId === comment.id}
+                    isLoading={deletingId === comment.id}
+                    loadingText="削除中..."
                   >
-                    {deletingId === comment.id ? "削除中" : "削除"}
-                  </button>
+                    削除
+                  </LoadingButton>
                 )}
               </div>
               <div className="mb-3 text-xs text-slate-500">

@@ -11,6 +11,7 @@ import { formatAction } from "@/app/lib/formatAction";
 import { apiFetch } from "@/app/lib/api/client";
 import { useIssueDetail } from "../hooks/useIssueDetail";
 import AssigneeSection from "../components/AssigneeSection";
+import LoadingButton from "@/app/components/LoadingButton";
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
@@ -71,6 +72,9 @@ const IssueDetailPage = () => {
     commentSubmitting,
     checks,
     checkMessage,
+    isChecking,
+    isDeleting,
+    isResolving,
     fetchIssue,
     fetchComments,
     handleCreateComment,
@@ -239,12 +243,16 @@ const IssueDetailPage = () => {
               {canResolve ? (
                 <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
                   {canResolve && (
-                    <button
+                    <LoadingButton
                       className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
                       onClick={handleResolvedIssue}
+                      isLoading={isResolving}
+                      loadingText={
+                        issue.status === "open" ? "解決中..." : "更新中..."
+                      }
                     >
                       {issue.status === "open" ? "解決" : "未解決に戻す"}
-                    </button>
+                    </LoadingButton>
                   )}
                   {isAdmin && (
                     <>
@@ -254,13 +262,15 @@ const IssueDetailPage = () => {
                       >
                         編集
                       </button>
-                      <button
+                      <LoadingButton
                         className="rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50 disabled:hidden"
                         onClick={handleDeleteIssue}
                         disabled={isEditing}
+                        isLoading={isDeleting}
+                        loadingText="削除中..."
                       >
                         削除
-                      </button>
+                      </LoadingButton>
                       <button
                         className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-blue-300 hover:text-blue-700"
                         onClick={() => setIsShowAuditLogs((prev) => !prev)}
@@ -298,13 +308,14 @@ const IssueDetailPage = () => {
                 />
 
                 <div className="flex justify-end gap-2">
-                  <button
+                  <LoadingButton
                     className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={handleUpdateIssue}
-                    disabled={isUpdating}
+                    isLoading={isUpdating}
+                    loadingText="保存中..."
                   >
                     保存
-                  </button>
+                  </LoadingButton>
 
                   <button
                     className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -346,6 +357,7 @@ const IssueDetailPage = () => {
               checks={checks ?? []}
               onCheck={handleCheckIssue}
               resultMessage={checkMessage ?? null}
+              isChecking={isChecking}
             />
             {isAdmin && (
               <AssigneeSection

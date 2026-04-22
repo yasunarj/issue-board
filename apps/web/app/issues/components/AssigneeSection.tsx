@@ -1,6 +1,7 @@
 "use client";
 
 import { IssueCheck } from "../types";
+import LoadingButton from "@/app/components/LoadingButton";
 
 type AssigneeSectionProps = {
   currentAssigneeName: string | null;
@@ -43,13 +44,15 @@ const AssigneeSection = ({
       </select>
 
       <div className="flex justify-end">
-        <button
+        <LoadingButton
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
           onClick={onAssignee}
-          disabled={isUpdatingAssignee || !selectedAssignee}
+          disabled={!selectedAssignee}
+          isLoading={isUpdatingAssignee}
+          loadingText="更新中..."
         >
-          {isUpdatingAssignee ? "更新中..." : "担当者を決定"}
-        </button>
+          担当者を決定
+        </LoadingButton>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
+import LoadingButton from "../components/LoadingButton";
 
 const RegisterSchema = z
   .object({
@@ -134,13 +135,14 @@ const RegisterPage = () => {
           onFocus={() => setMessage(null)}
           onChange={(e) => setPasswordConfirm(e.target.value)}
         />
-        <button
+        <LoadingButton
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={handleRegister}
-          disabled={isLoading}
+          isLoading={isLoading}
+          loadingText="登録中..."
         >
-          {isLoading ? "登録中" : "登録する"}
-        </button>
+          登録する
+        </LoadingButton>
 
         {message && (
           <p

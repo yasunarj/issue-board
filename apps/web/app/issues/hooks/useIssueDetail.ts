@@ -31,6 +31,9 @@ const useIssueDetail = ({
   const [commentSubmitting, setCommentSubmitting] = useState<boolean>(false);
   const [checks, setChecks] = useState<IssueCheck[]>([]);
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isResolving, setIsResolving] = useState<boolean>(false);
 
   const fetchIssue = useCallback(async () => {
     try {
@@ -136,6 +139,7 @@ const useIssueDetail = ({
   }, [commentInput, fetchComments, issueId, setMessage]);
 
   const handleCheckIssue = useCallback(async () => {
+    setIsChecking(true);
     try {
       const res = await apiFetch(`/issues/${issueId}/check`, {
         method: "POST",
@@ -156,12 +160,15 @@ const useIssueDetail = ({
     } catch (e) {
       const message = e instanceof Error ? e.message : "不明なエラー";
       setMessage({ text: message, type: "error" });
+    } finally {
+      setIsChecking(false);
     }
   }, [fetchChecks, issueId, setMessage]);
 
   const handleDeleteIssue = useCallback(async () => {
     if (!confirm("本当に削除してよろしいですか？")) return;
 
+    setIsDeleting(true);
     try {
       const res = await apiFetch(`/issues/${issueId}`, {
         method: "DELETE",
@@ -183,10 +190,13 @@ const useIssueDetail = ({
         text: e instanceof Error ? e.message : "削除中にエラーが発生しまいした",
         type: "error",
       });
+    } finally {
+      setIsDeleting(false);
     }
   }, [issueId, router, setMessage]);
 
   const handleResolvedIssue = useCallback(async () => {
+    setIsResolving(true);
     try {
       const res = await apiFetch(`/issues/${issueId}/resolve`, {
         method: "PATCH",
@@ -221,6 +231,8 @@ const useIssueDetail = ({
           e instanceof Error ? e.message : "ステータスを更新できませんでした",
         type: "error",
       });
+    } finally {
+      setIsResolving(false);
     }
   }, [fetchIssue, isAdmin, issueId, onResolved, setMessage]);
 
@@ -233,6 +245,9 @@ const useIssueDetail = ({
     commentSubmitting,
     checks,
     checkMessage,
+    isChecking,
+    isDeleting,
+    isResolving,
     fetchIssue,
     fetchComments,
     handleCreateComment,
