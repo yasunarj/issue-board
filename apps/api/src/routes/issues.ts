@@ -285,6 +285,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
   const body = await c.req.json();
   const user = c.get("user");
 
+  console.log("assignee: parsed request body");
+
   const result = updateAssigneeSchema.safeParse(body);
 
   if (!result.success) {
@@ -294,6 +296,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
   }
 
   const { assignedTo } = result.data;
+
+  console.log("assignee: before issue select");
 
   const { data: issue, error: issueError } = await supabaseAdmin
     .from("issues")
@@ -307,6 +311,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
     .eq("id", issueId)
     .single();
 
+  console.log("assignee: after issue select");
+
   if (issueError || !issue) {
     return c.json({ error: "Issue not found" }, 404);
   }
@@ -317,6 +323,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
     .eq("issue_id", issueId)
     .eq("user_id", assignedTo)
     .maybeSingle();
+
+  console.log("assignee: after checked user lookup");
 
   if (checkedUserError) {
     console.error(checkedUserError);
@@ -333,6 +341,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
     .eq("id", assignedTo)
     .single();
 
+  console.log("assignee: after profile lookup");
+
   if (assigneeProfileError || !assigneeProfile) {
     return c.json({ error: "Assignee not found" }, 404);
   }
@@ -348,6 +358,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
     .eq("id", issueId)
     .select()
     .single();
+
+  console.log("assignee: after issue update");
 
   if (error) {
     console.error(error);
@@ -366,6 +378,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
       assignee_display_name: assigneeProfile.display_name ?? null
     }
   })
+
+  console.log("assignee: after audit log");
 
   try {
     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(assignedTo);
@@ -395,6 +409,8 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
   } catch (mailError) {
     console.error("メール送信失", mailError);
   }
+
+console.log("assignee: before response");
 
   return c.json({
     message: "Issue assignee updated",
