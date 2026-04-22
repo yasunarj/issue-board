@@ -2,7 +2,7 @@
   "name": "api",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/app.ts",
   "scripts": {
     "test": "vitest run",
     "dev": "tsx watch src/server.ts",
