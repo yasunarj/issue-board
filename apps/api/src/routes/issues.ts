@@ -419,7 +419,8 @@ issues.patch("/:id", requireRole(["admin"]), async (c) => {
 //   }, 200);
 // })
 issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
-  return c.json({ ok: true, step: "start" }, 200);
+  const body = await c.req.json();
+  return c.json({ ok: true, step: "parsed", body }, 200);
 });
 
 issues.patch("/:id/resolve", requireRole(["admin", "member"]), async (c) => {
