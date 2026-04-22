@@ -366,18 +366,18 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
     return c.json({ error: "Failed to update issue assignee" }, 500);
   }
 
-  await createAuditLog({
-    userId: user.id,
-    action: "issue.assign",
-    targetType: "issue",
-    targetId: data.id,
-    issueId: data.id,
-    detail: {
-      previous_assigned_to: issue.assigned_to ?? null,
-      assigned_to: assignedTo,
-      assignee_display_name: assigneeProfile.display_name ?? null
-    }
-  })
+  // await createAuditLog({
+  //   userId: user.id,
+  //   action: "issue.assign",
+  //   targetType: "issue",
+  //   targetId: data.id,
+  //   issueId: data.id,
+  //   detail: {
+  //     previous_assigned_to: issue.assigned_to ?? null,
+  //     assigned_to: assignedTo,
+  //     assignee_display_name: assigneeProfile.display_name ?? null
+  //   }
+  // })
 
   console.log("assignee: after audit log");
 
