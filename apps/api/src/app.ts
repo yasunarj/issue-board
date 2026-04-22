@@ -5,6 +5,7 @@ import auditLogs from "./routes/auditLogs.js";
 import issues from "./routes/issues.js";
 import me from "./routes/me.js";
 import internal from "./routes/internal.js";
+import { handle } from "@hono/node-server/vercel";
 
 export type Role = "member" | "admin" | "viewer";
 
@@ -39,3 +40,7 @@ export const createApp = () => {
 
   return app;
 };
+
+const app = createApp();
+
+export default handle(app);
