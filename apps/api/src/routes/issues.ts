@@ -381,34 +381,34 @@ issues.patch("/:id/assignee", requireRole(["admin"]), async (c) => {
 
   console.log("assignee: after audit log");
 
-  // try {
-  //   const { data: userData } = await supabaseAdmin.auth.admin.getUserById(assignedTo);
-  //   const email = userData.user?.email;
-  //   const issueUrl = `${process.env.APP_BASE_URL}/issues/${issueId}`
+  try {
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(assignedTo);
+    const email = userData.user?.email;
+    const issueUrl = `${process.env.APP_BASE_URL}/issues/${issueId}`
 
-  //   if (!email) {
-  //     throw new Error("担当者のメールアドレスが見つかりません");
-  //   }
+    if (!email) {
+      throw new Error("担当者のメールアドレスが見つかりません");
+    }
 
-  //   const mailTemplate = buildIssueMailTemplate({
-  //     notificationType: "担当者設定通知",
-  //     headline: "あなたがIssueの担当者に設定されました。",
-  //     issueTitle: issue.title,
-  //     dueDate: issue.due_date,
-  //     assigneeName: assigneeProfile.display_name,
-  //     issueUrl,
-  //     action: "詳細ページで内容と期限を確認し、対応を開始してください。",
-  //   });
+    const mailTemplate = buildIssueMailTemplate({
+      notificationType: "担当者設定通知",
+      headline: "あなたがIssueの担当者に設定されました。",
+      issueTitle: issue.title,
+      dueDate: issue.due_date,
+      assigneeName: assigneeProfile.display_name,
+      issueUrl,
+      action: "詳細ページで内容と期限を確認し、対応を開始してください。",
+    });
 
-  //   await sendMail({
-  //     to: email,
-  //     subject: `[Issue Board] 担当者設定: ${issue.title}`,
-  //     text: mailTemplate.text,
-  //     html: mailTemplate.html,
-  //   })
-  // } catch (mailError) {
-  //   console.error("メール送信失", mailError);
-  // }
+    await sendMail({
+      to: email,
+      subject: `[Issue Board] 担当者設定: ${issue.title}`,
+      text: mailTemplate.text,
+      html: mailTemplate.html,
+    })
+  } catch (mailError) {
+    console.error("メール送信失", mailError);
+  }
 
 console.log("assignee: before response");
 

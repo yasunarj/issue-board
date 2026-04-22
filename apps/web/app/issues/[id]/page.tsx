@@ -149,6 +149,7 @@ const IssueDetailPage = () => {
     setIsUpdatingAssignee(true);
 
     try {
+      console.log("debug");
       const res = await apiFetch(`/issues/${issueId}/assignee`, {
         method: "PATCH",
         headers: {
