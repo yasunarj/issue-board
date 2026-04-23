@@ -14,6 +14,8 @@ export const formatAction = (action: string) => {
       return "コメントを削除しました";
     case "issue.check":
       return "確認しました";
+    case "issue.assign":
+      return "担当者を設定しました";
     default:
       return action;
   }

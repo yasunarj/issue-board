@@ -7,7 +7,13 @@ import { buildIssueMailTemplate } from "../lib/issueMailTemplate.js";
 const internal = new Hono<AppEnv>();
 
 internal.get("/reminders/run", async (c) => {
-  if (c.req.header("x-internal-secret") !== process.env.INTERNAL_API_SECRET) {
+  const authHeader = c.req.header("authorization");
+  const internalSecret = c.req.header("x-internal-secret");
+
+  const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+  const isManual = internalSecret === process.env.INTERNAL_API_SECRET;
+  
+  if (!isCron && !isManual) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
