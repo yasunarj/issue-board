@@ -281,8 +281,7 @@ const IssueDetailPage = () => {
                   )}
                 </div>
               ) : (
-                <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
-                  {issue.status}
+                <span>
                 </span>
               )}
             </div>
