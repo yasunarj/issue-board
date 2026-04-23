@@ -347,11 +347,6 @@ const IssueDetailPage = () => {
               </span>
             </div>
 
-            <CommentList
-              comments={comments}
-              setMessage={setMessage}
-              fetchComments={fetchComments}
-            />
             <CheckSection
               issueId={issueId}
               checks={checks ?? []}
@@ -369,6 +364,11 @@ const IssueDetailPage = () => {
                 isUpdatingAssignee={isUpdatingAssignee}
               />
             )}
+            <CommentList
+              comments={comments}
+              setMessage={setMessage}
+              fetchComments={fetchComments}
+            />
             <CommentForm
               issueId={issueId}
               value={commentInput}
