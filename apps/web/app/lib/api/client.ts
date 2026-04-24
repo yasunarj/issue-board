@@ -27,7 +27,9 @@ export const apiFetch = async (
   init?: RequestInit,
   options: ApiFetchOptions = {},
 ) => {
+  // withAuth未設定ならtrue (認証あり)
   const { withAuth = true } = options;
+  // 呼び出し側のheadersを引き継ぐ
   const headers = new Headers(init?.headers);
 
   if (withAuth) {
