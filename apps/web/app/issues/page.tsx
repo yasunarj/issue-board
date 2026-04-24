@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import type { IssueListItem } from "./types";
 import { useMe } from "../hooks/useMe";
 import IssueCard from "./components/IssueCard";
 import IssueForm from "./components/IssueForm";
 import Link from "next/link";
 import { apiFetch } from "../lib/api/client";
+import { supabase } from "@/lib/supabase/client";
 
 const IssuesPage = () => {
   const { isAdmin } = useMe();
+  const router = useRouter();
   const [issues, setIssues] = useState<IssueListItem[]>([]);
   const [message, setMessage] = useState<{
     text: string;
@@ -54,6 +57,11 @@ const IssuesPage = () => {
     void fetchIssues();
   }, [fetchIssues]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
       <div className="mx-auto max-w-5xl">
@@ -62,14 +70,22 @@ const IssuesPage = () => {
             <p className="text-sm font-medium text-blue-700">Issue 管理</p>
             <h1 className="mt-1 text-3xl font-bold">Issue Board</h1>
           </div>
-          {isAdmin && (
-            <Link
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-blue-300 hover:text-blue-700"
-              href="/admin/audit-logs"
+          <div className="flex flex-col gap-4"> 
+            <button
+              className="text-sm font-medium text-blue-700"
+              onClick={handleLogout}
             >
-              監査ログ
-            </Link>
-          )}
+              ログアウト
+            </button>
+            {isAdmin && (
+              <Link
+                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-blue-300 hover:text-blue-700"
+                href="/admin/audit-logs"
+              >
+                監査ログ
+              </Link>
+            )}
+          </div>
         </div>
 
         {message && (
