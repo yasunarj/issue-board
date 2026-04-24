@@ -26,6 +26,7 @@ const Home = () => {
 
       router.replace("/issues");
     }
+    redirectByAuth();
   }, [router]);
 
   return (
