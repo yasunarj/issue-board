@@ -12,6 +12,7 @@ const Home = () => {
     const redirectByAuth = async () => {
       const { data } = await supabase.auth.getSession();
 
+
       if (!data.session?.access_token) {
         router.replace("login");
         return;

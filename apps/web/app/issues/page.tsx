@@ -22,7 +22,6 @@ const IssuesPage = () => {
   const fetchIssues = useCallback(async () => {
     try {
       const res = await apiFetch("/issues");
-
       const data = await res.json();
 
       if (!res.ok) {
@@ -135,5 +134,3 @@ const IssuesPage = () => {
 };
 
 export default IssuesPage;
-
-// Issueにコメント数を追加する。apiを書き換えるがjoin + countで必要最低限の処理で取得する方法を覚える

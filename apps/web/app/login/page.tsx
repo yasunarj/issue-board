@@ -48,7 +48,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     const redirectIfLoggedIn = async () => {
-      const role = init();
+      const role = await init();
       if (role !== null) {
         router.replace("/issues")
       }
