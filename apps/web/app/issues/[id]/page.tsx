@@ -12,11 +12,14 @@ import { apiFetch } from "@/app/lib/api/client";
 import { useIssueDetail } from "../hooks/useIssueDetail";
 import AssigneeSection from "../components/AssigneeSection";
 import LoadingButton from "@/app/components/LoadingButton";
+import { useRequireAuth } from "@/app/hooks/useRequireAuth";
+
 
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
   const { me, isAdmin } = useMe();
+  const { isCheckingAuth } = useRequireAuth();
   const canResolve = me?.role === "admin" || me?.role === "member";
   const [message, setMessage] = useState<{
     text: string;
@@ -186,6 +189,10 @@ const IssueDetailPage = () => {
       setIsUpdatingAssignee(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return <p>確認中...</p>
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">

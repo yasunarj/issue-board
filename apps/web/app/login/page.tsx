@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 import Link from "next/link";
 import LoadingButton from "../components/LoadingButton";
+import { useSearchParams } from "next/navigation";
 
 const loginSchema = z.object({
   email: z.email("メール形式が正しくありません"),
@@ -13,6 +14,8 @@ const loginSchema = z.object({
 });
 
 const LoginPage = () => {
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "/issues";
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,12 +28,12 @@ const LoginPage = () => {
       const { data: session } = await supabase.auth.getSession();
 
       if (session.session?.access_token) {
-        router.replace("/issues");
+        router.replace(redirectTo);
       }
     };
 
     redirectIfLoggedIn();
-  }, [router]);
+  }, [router, redirectTo]);
 
   const handleLogin = async () => {
     setIsLoading(true);
