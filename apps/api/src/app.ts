@@ -47,8 +47,8 @@ export const createApp = () => {
       text: response.output_text,
     });
   });
-  
-  app.get("/ai/format-text", async (c) => {
+
+  app.post("/ai/format-text", async (c) => {
     try {
       const body = await c.req.json();
       const text = body.text;
