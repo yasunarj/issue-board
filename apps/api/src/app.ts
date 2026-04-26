@@ -5,6 +5,7 @@ import auditLogs from "./routes/auditLogs.js";
 import issues from "./routes/issues.js";
 import me from "./routes/me.js";
 import internal from "./routes/internal.js";
+import OpenAI from "openai";
 
 export type Role = "member" | "admin" | "viewer";
 
@@ -32,8 +33,19 @@ export const createApp = () => {
 
   app.get("/health", (c) => c.json({ ok: true }));
   app.get("/ai/test", async (c) => {
-    const hasKey = Boolean(process.env.OPENAI_API_KEY);
-    return c.json({ ok: true, hasKey });
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const response = await client.responses.create({
+      model: "gpt-4.1-mini",
+      input: "Issue Boardへの一言応援メッセージをください。",
+    });
+
+    return c.json({
+      ok: true,
+      text: response.output_text,
+    });
   });
 
   app.route("/me", me);
