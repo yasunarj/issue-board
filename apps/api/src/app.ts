@@ -31,6 +31,9 @@ export const createApp = () => {
   );
 
   app.get("/health", (c) => c.json({ ok: true }));
+  app.get("/ai/test", async (c) => {
+    return c.json({ ok: true, message: "AI route ready" });
+  });
 
   app.route("/me", me);
   app.route("/issues", issues);
