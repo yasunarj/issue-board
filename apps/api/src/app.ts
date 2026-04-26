@@ -32,7 +32,8 @@ export const createApp = () => {
 
   app.get("/health", (c) => c.json({ ok: true }));
   app.get("/ai/test", async (c) => {
-    return c.json({ ok: true, message: "AI route ready" });
+    const hasKey = Boolean(process.env.OPENAI_API_KEY);
+    return c.json({ ok: true, hasKey });
   });
 
   app.route("/me", me);
