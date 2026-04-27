@@ -14,11 +14,14 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
   const [description, setDescription] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [aiText, setAiText] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const formReset = () => {
     setTitle("");
     setDescription("");
     setDueDate("");
+    setAiText("");
   };
   
   const handleCreateIssue = async () => {
@@ -55,6 +58,41 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
       setIsSubmitting(false);
     }
   };
+
+  const handleAiFormat = async () => {
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      if (!description.trim()) {
+        setMessage({ text: "整形する文章を入力してください", type: "error" });
+        return;
+      }
+
+      const res = await apiFetch("/ai/format-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: description })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.message ?? "AIの整形に失敗しました",
+          type: "error",
+        })
+        return;
+      }
+
+      setAiText(data.text);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="mb-8 flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
       <div>
@@ -77,6 +115,32 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
+      
+      <LoadingButton
+        className="w-fit rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleAiFormat}
+        isLoading={isLoading}
+        loadingText="整形中..."
+      >
+        AIで整える
+      </LoadingButton>
+
+      {aiText && (
+        <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
+          <p className="text-sm font-medium text-blue-700">AI整形案</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+            {aiText}
+          </p>
+
+          <button
+            type="button"
+            className="mt-3 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            onClick={() => setDescription(aiText)}
+          >
+            この文章を使う
+          </button>
+        </div>
+      )}
 
       <input
         type="date"

@@ -14,7 +14,6 @@ import AssigneeSection from "../components/AssigneeSection";
 import LoadingButton from "@/app/components/LoadingButton";
 import { useRequireAuth } from "@/app/hooks/useRequireAuth";
 
-
 const IssueDetailPage = () => {
   const params = useParams<{ id: string }>();
   const issueId = params.id as string;
@@ -37,6 +36,9 @@ const IssueDetailPage = () => {
 
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [isUpdatingAssignee, setIsUpdatingAssignee] = useState<boolean>(false);
+
+  const [editAiText, setEditAiText] = useState<string>("");
+  const [isEditAiLoading, setIsEditAiLoading] = useState<boolean>(false);
 
   const fetchAuditLogs = useCallback(async () => {
     if (!isAdmin) return;
@@ -106,6 +108,39 @@ const IssueDetailPage = () => {
     setEditDueDate(issue.due_date ?? "");
     setSelectedAssignee(issue.assigned_to ?? "");
   }, [issue]);
+
+  const handleEditAiFormat = async () => {
+    setIsEditAiLoading(true);
+    setMessage(null);
+
+    try {
+      if (!editDescription.trim()) {
+        setMessage({ text: "整形する文章を入力してください", type: "error" });
+        return;
+      }
+
+      const res = await apiFetch("/ai/format-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: editDescription }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({
+          text: data.message ?? "AI整形に失敗しました",
+          type: "error",
+        });
+      }
+
+      setEditAiText(data.text);
+    } finally {
+      setIsEditAiLoading(false);
+    }
+  };
 
   const handleUpdateIssue = async () => {
     setIsUpdating(true);
@@ -191,7 +226,7 @@ const IssueDetailPage = () => {
   };
 
   if (isCheckingAuth) {
-    return <p>確認中...</p>
+    return <p>確認中...</p>;
   }
 
   return (
@@ -288,8 +323,7 @@ const IssueDetailPage = () => {
                   )}
                 </div>
               ) : (
-                <span>
-                </span>
+                <span></span>
               )}
             </div>
 
@@ -306,6 +340,37 @@ const IssueDetailPage = () => {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                 />
+
+                <LoadingButton className="w-fit rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleEditAiFormat}
+                isLoading={isEditAiLoading}
+                loadingText="整形中..."
+                >
+                  AIで整える
+                </LoadingButton>
+
+                {editAiText && (
+                  <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
+                    <p className="text-sm font-medium text-blue-700">
+                      AI整形案
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                      {editAiText}
+                    </p>
+
+                    <button
+                      type="button"
+                      className="mt-3 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                      onClick={() => {
+                        setEditDescription(editAiText);
+                        
+                      }}
+                    >
+                      この文章を使う
+                    </button>
+                  </div>
+                )}
+
                 <input
                   type="date"
                   className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
@@ -325,7 +390,10 @@ const IssueDetailPage = () => {
 
                   <button
                     className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                    onClick={() => setIsEditing(false)}
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditAiText("");
+                    }}
                   >
                     キャンセル
                   </button>
@@ -362,7 +430,9 @@ const IssueDetailPage = () => {
             />
             {isAdmin && (
               <AssigneeSection
-                currentAssigneeName={issue.assigned_to_profile?.display_name ?? null}
+                currentAssigneeName={
+                  issue.assigned_to_profile?.display_name ?? null
+                }
                 selectedAssignee={selectedAssignee}
                 setSelectedAssignee={setSelectedAssignee}
                 onAssignee={handleUpdateAssignee}
