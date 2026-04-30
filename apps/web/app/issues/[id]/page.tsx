@@ -371,12 +371,11 @@ const IssueDetailPage = () => {
                   </div>
                 )}
 
-                <div className="relative">
+                <div className="relative w-full min-w-0">
                   <input
                     type="date"
                     style={{ colorScheme: "light", WebkitTextFillColor: "#0f172a" }}
-                    placeholder="年月日"
-                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="block w-full min-w-0 max-w-full box-border rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     value={editDueDate}
                     onChange={(e) => setEditDueDate(e.target.value)}
                   />
