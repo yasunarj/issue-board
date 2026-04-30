@@ -145,9 +145,19 @@ const IssueForm = ({ onCreatedIssue, setMessage }: IssueForm) => {
         </div>
       )}
 
+      {!dueDate && (
+        <p className="text-xs text-slate-500">タップして期日を選択してください</p>
+      )}
+
       <input
         type="date"
-        className="bg-white rounded-md scheme-dark border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        style={{
+          colorScheme: "light",
+          WebkitTextFillColor: "#0f172a",
+          color: "#0f172a",
+          opacity: 1,
+        }}
+        className="bg-white rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
       />
