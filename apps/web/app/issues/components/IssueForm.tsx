@@ -142,14 +142,20 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         </div>
       )}
 
-      <input
-        type="date"
-        style={{ colorScheme: "light", WebkitTextFillColor: "#0f172a", }}
-        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-        placeholder="詳細"
-        value={dueDate}
-        onChange={(e) => setDueDate(e.target.value)}
-      />
+      <div className="relative">
+        <input
+          type="date"
+          style={{ colorScheme: "light", WebkitTextFillColor: "#0f172a" }}
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
+        {!dueDate && (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-900 sm:hidden">
+            年/月/日
+          </span>
+        )}
+      </div>
 
       <LoadingButton
         className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
