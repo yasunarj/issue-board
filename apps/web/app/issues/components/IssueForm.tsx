@@ -1,15 +1,17 @@
 "use client";
 
-import {  Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { apiFetch } from "@/app/lib/api/client";
 import LoadingButton from "@/app/components/LoadingButton";
 
 type IssueForm = {
   onCreatedIssue: () => Promise<void>;
-  setMessage: Dispatch<SetStateAction<{text: string; type: "success" | "error" } | null>>
-}
+  setMessage: Dispatch<
+    SetStateAction<{ text: string; type: "success" | "error" } | null>
+  >;
+};
 
-const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
+const IssueForm = ({ onCreatedIssue, setMessage }: IssueForm) => {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [dueDate, setDueDate] = useState<string>("");
@@ -23,10 +25,10 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
     setDueDate("");
     setAiText("");
   };
-  
+
   const handleCreateIssue = async () => {
     setIsSubmitting(true);
-  
+
     try {
       const res = await apiFetch("/issues", {
         method: "POST",
@@ -39,9 +41,9 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
           dueDate,
         }),
       });
-  
+
       const data = await res.json();
-  
+
       if (!res.ok) {
         setMessage({
           text: data.error ?? "issueの作成に失敗しました",
@@ -49,10 +51,10 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         });
         return;
       }
-  
+
       formReset();
       setMessage({ text: "issueを作成しました", type: "success" });
-  
+
       await onCreatedIssue();
     } finally {
       setIsSubmitting(false);
@@ -74,7 +76,7 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: description })
+        body: JSON.stringify({ text: description }),
       });
 
       const data = await res.json();
@@ -83,7 +85,7 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         setMessage({
           text: data.message ?? "AIの整形に失敗しました",
           type: "error",
-        })
+        });
         return;
       }
 
@@ -91,7 +93,7 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="mb-8 flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -115,7 +117,7 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      
+
       <LoadingButton
         className="w-fit rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleAiFormat}
@@ -144,8 +146,13 @@ const IssueForm = ({onCreatedIssue, setMessage}: IssueForm) => {
 
       <input
         type="date"
+        style={{
+          colorScheme: "light",
+          WebkitTextFillColor: "#0f172a",
+          color: "#0f172a",
+          opacity: 1,
+        }}
         className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-        placeholder="詳細"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
       />

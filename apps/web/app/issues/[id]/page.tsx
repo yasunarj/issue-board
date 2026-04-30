@@ -341,10 +341,11 @@ const IssueDetailPage = () => {
                   onChange={(e) => setEditDescription(e.target.value)}
                 />
 
-                <LoadingButton className="w-fit rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleEditAiFormat}
-                isLoading={isEditAiLoading}
-                loadingText="整形中..."
+                <LoadingButton
+                  className="w-fit rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleEditAiFormat}
+                  isLoading={isEditAiLoading}
+                  loadingText="整形中..."
                 >
                   AIで整える
                 </LoadingButton>
@@ -363,7 +364,6 @@ const IssueDetailPage = () => {
                       className="mt-3 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                       onClick={() => {
                         setEditDescription(editAiText);
-                        
                       }}
                     >
                       この文章を使う
@@ -373,8 +373,12 @@ const IssueDetailPage = () => {
 
                 <input
                   type="date"
-                  style={{ colorScheme: "light" }}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 scheme-light focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  style={{
+                    colorScheme: "light",
+                    WebkitTextFillColor: "#0f172a",
+                    opacity: 1, 
+                  }}
+                  className="block w-full min-w-0 max-w-full box-border rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                   value={editDueDate}
                   onChange={(e) => setEditDueDate(e.target.value)}
                 />
