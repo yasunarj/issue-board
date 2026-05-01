@@ -372,7 +372,7 @@ const IssueDetailPage = () => {
                 )}
 
                 <div className="flex items-center gap-4 w-full">
-                  <p className="text-slate-500">期日</p>
+                  <label className="shrink-0 text-sm text-slate-500">期日</label>
                   <input
                     type="date"
                     style={{

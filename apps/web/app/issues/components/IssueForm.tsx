@@ -145,9 +145,9 @@ const IssueForm = ({ onCreatedIssue, setMessage }: IssueForm) => {
       )}
 
       <div className="flex items-center gap-4 w-full">
-        <p className=" text-slate-500">
+        <label className="shrink-0 text-sm text-slate-500">
           期日
-        </p>
+        </label>
         <input
           type="date"
           style={{
