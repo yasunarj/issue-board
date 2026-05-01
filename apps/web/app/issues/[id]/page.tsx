@@ -371,17 +371,20 @@ const IssueDetailPage = () => {
                   </div>
                 )}
 
-                <input
-                  type="date"
-                  style={{
-                    colorScheme: "light",
-                    WebkitTextFillColor: "#0f172a",
-                    opacity: 1, 
-                  }}
-                  className="block w-full min-w-0 max-w-full box-border rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  value={editDueDate}
-                  onChange={(e) => setEditDueDate(e.target.value)}
-                />
+                <div className="flex items-center gap-4 w-full">
+                  <p className="text-slate-500">期日</p>
+                  <input
+                    type="date"
+                    style={{
+                      colorScheme: "light",
+                      WebkitTextFillColor: "#0f172a",
+                      opacity: 1,
+                    }}
+                    className="block w-full min-w-0 max-w-full box-border rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 flex-1"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                  />
+                </div>
 
                 <div className="flex justify-end gap-2">
                   <LoadingButton
