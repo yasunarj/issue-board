@@ -25,7 +25,6 @@ ai.get("/test", async (c) => {
 });
 
 ai.post("/format-text", async (c) => {
-
   try {
     const body = await c.req.json();
     const text = body.text;
@@ -63,7 +62,7 @@ ai.post("/format-text", async (c) => {
     return c.json({
       ok: true,
       text: response.output_text,
-    });
+    }, 200);
   } catch (error) {
     console.error(error);
 

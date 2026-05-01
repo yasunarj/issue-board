@@ -51,10 +51,46 @@ vi.mock("./lib/supabase", () => {
   }
 })
 
+const responsesCreateMock = vi.fn();
+
+vi.mock("openai", () => {
+  class OpenAIMock {
+    responses = {
+      create: responsesCreateMock,
+    };
+  }
+
+  return {
+    default: OpenAIMock,
+  }
+})
+
+const getUserByIdMock = vi.fn();
+
+vi.mock("./lib/supabase", () => {
+  return {
+    supabaseAdmin: {
+      from: fromMock,
+      auth: {
+        admin: {
+          getUserById: getUserByIdMock,
+        }
+      }
+    }
+  }
+})
+
 beforeEach(() => {
   vi.clearAllMocks();
   fromMock.mockReset();
   sendMailMock.mockResolvedValue(undefined);
+  responsesCreateMock.mockReset();
+  getUserByIdMock.mockReset();
+
+  process.env.OPENAI_API_KEY = "test-openai-key";
+  process.env.CRON_SECRET = "test-cron-secret";
+  process.env.INTERNAL_API_SECRET = "test-internal-secret";
+  process.env.APP_BASE_URL = "http://localhost:3000";
 });
 
 const request = async (
@@ -1473,313 +1509,55 @@ describe("app", () => {
     expect(body.error).toBe("Failed to create check");
     expect(createAuditLog).not.toHaveBeenCalled();
   });
+
+  it("OPENAI_API_KEY が無いと 500 を返す", async () => {
+    delete process.env.OPENAI_API_KEY;
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/ai/format-text", {
+      method: "POST",
+      body: JSON.stringify({ text: "テスト" })
+    });
+
+    expect(res.status).toBe(500);
+    const body = await res.json() as { ok: boolean, message: string };
+    expect(body).toEqual({
+      ok: false,
+      message: "OPENAI_API_KEY is not set"
+    })
+
+  })
+
+  it("POST /ai/format-text は文章を整形して返す", async () => {
+    responsesCreateMock.mockResolvedValue({
+      output_text: "整形された文章",
+    });
+  
+    const { createApp } = await import("./app");
+    const app = createApp();
+  
+    const res = await request(app, "/ai/format-text", {
+      method: "POST",
+      body: JSON.stringify({ text: "テスト文章" }),
+    });
+  
+    expect(res.status).toBe(200);
+  
+    const body = await res.json() as { ok: boolean; text: string };
+  
+    expect(body).toEqual({
+      ok: true,
+      text: "整形された文章",
+    });
+  
+    expect(responsesCreateMock).toHaveBeenCalledTimes(1);
+    expect(responsesCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "gpt-4.1-mini",
+        input: expect.stringContaining("テスト文章"),
+      }),
+    );
+  });
 })
-
-
-// import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// const fromMock = vi.fn();
-// const createAuditLogMock = vi.fn();
-// const sendMailMock = vi.fn();
-
-// vi.mock("./middleware/auth", () => {
-//   return {
-//     authMiddleware: async (c: any, next: () => Promise<void>) => {
-//       const role = c.req.header("x-test-role");
-
-//       if (!role) {
-//         return c.json({ error: "Unauthorized" }, 401);
-//       }
-
-//       c.set("user", {
-//         id: "user-1",
-//         email: "test@example.com",
-//       });
-//       c.set("role", role);
-
-//       await next();
-//     },
-//   };
-// });
-
-// vi.mock("./lib/supabase", () => {
-//   return {
-//     supabaseAdmin: {
-//       from: fromMock,
-//     },
-//   };
-// });
-
-// vi.mock("./lib/auditLog", () => {
-//   return {
-//     createAuditLog: createAuditLogMock,
-//   };
-// });
-
-// vi.mock("./lib/sendMain", () => {
-//   return {
-//     sendMail: sendMailMock,
-//   };
-// });
-
-// type MockResult = {
-//   data?: unknown;
-//   error?: unknown;
-// };
-
-// type ChainState = {
-//   table: string;
-//   operation: "select" | "insert" | "update" | "delete" | null;
-//   filters: Array<{ column: string; value: string }>;
-//   insertPayload?: unknown;
-//   updatePayload?: unknown;
-// };
-
-// const createBuilder = (
-//   resolver: (state: ChainState) => MockResult | Promise<MockResult>,
-//   state: ChainState,
-// ) => {
-//   const builder = {
-//     select: vi.fn(() => {
-//       if (state.operation === null) {
-//         state.operation = "select";
-//       }
-//       return builder;
-//     }),
-//     insert: vi.fn((payload: unknown) => {
-//       state.operation = "insert";
-//       state.insertPayload = payload;
-//       return builder;
-//     }),
-//     update: vi.fn((payload: unknown) => {
-//       state.operation = "update";
-//       state.updatePayload = payload;
-//       return builder;
-//     }),
-//     delete: vi.fn(() => {
-//       state.operation = "delete";
-//       return builder;
-//     }),
-//     eq: vi.fn((column: string, value: string) => {
-//       state.filters.push({ column, value });
-//       return builder;
-//     }),
-//     order: vi.fn(() => builder),
-//     limit: vi.fn(() => builder),
-//     maybeSingle: vi.fn(async () => resolver(state)),
-//     single: vi.fn(async () => resolver(state)),
-//   };
-
-//   return builder;
-// };
-
-// const createFromMockImplementation = (
-//   resolver: (state: ChainState) => MockResult | Promise<MockResult>,
-// ) => {
-//   return (table: string) =>
-//     createBuilder(resolver, {
-//       table,
-//       operation: null,
-//       filters: [],
-//     });
-// };
-
-// const request = async (
-//   app: { fetch: (request: Request) => Promise<Response> },
-//   path: string,
-//   init?: RequestInit,
-// ) => {
-//   return app.fetch(
-//     new Request(`http://localhost${path}`, {
-//       ...init,
-//       headers: {
-//         "Content-Type": "application/json",
-//         ...(init?.headers ?? {}),
-//       },
-//     }),
-//   );
-// };
-
-// describe("issues API", () => {
-//   beforeEach(() => {
-//     vi.resetModules();
-//     vi.clearAllMocks();
-//     fromMock.mockReset();
-//     createAuditLogMock.mockResolvedValue(undefined);
-//     sendMailMock.mockResolvedValue(undefined);
-//   });
-
-//   it("allows only admin to delete issues", async () => {
-//     const { createApp } = await import("./app");
-//     const app = createApp();
-
-//     const viewerRes = await request(app, "/issues/issue-1", {
-//       method: "DELETE",
-//       headers: {
-//         "x-test-role": "viewer",
-//       },
-//     });
-
-//     expect(viewerRes.status).toBe(403);
-
-//     fromMock.mockImplementation(
-//       createFromMockImplementation((state) => {
-//         if (state.table === "issues" && state.operation === "select") {
-//           return { data: { id: "issue-1", title: "Test issue" }, error: null };
-//         }
-
-//         if (state.table === "issues" && state.operation === "delete") {
-//           return { error: null };
-//         }
-
-//         return { data: null, error: null };
-//       }),
-//     );
-
-//     const adminRes = await request(app, "/issues/issue-1", {
-//       method: "DELETE",
-//       headers: {
-//         "x-test-role": "admin",
-//       },
-//     });
-
-//     expect(adminRes.status).toBe(200);
-//     await expect(adminRes.json()).resolves.toEqual({ message: "Issue deleted" });
-//     expect(createAuditLogMock).toHaveBeenCalled();
-//   });
-
-//   it("forbids viewers from creating issues", async () => {
-//     const { createApp } = await import("./app");
-//     const app = createApp();
-
-//     const res = await request(app, "/issues", {
-//       method: "POST",
-//       headers: {
-//         "x-test-role": "viewer",
-//       },
-//       body: JSON.stringify({
-//         title: "New issue",
-//         description: "Description",
-//         dueDate: "2026-04-01",
-//       }),
-//     });
-
-//     expect(res.status).toBe(403);
-//   });
-
-//   it("rejects empty comments", async () => {
-//     const { createApp } = await import("./app");
-//     const app = createApp();
-
-//     const res = await request(app, "/issues/issue-1/comments", {
-//       method: "POST",
-//       headers: {
-//         "x-test-role": "member",
-//       },
-//       body: JSON.stringify({
-//         comment: "   ",
-//       }),
-//     });
-
-//     expect(res.status).toBe(400);
-//     await expect(res.json()).resolves.toEqual({
-//       error: "comment is required",
-//     });
-//   });
-
-//   it("toggles issue status from open to resolved", async () => {
-//     fromMock.mockImplementation(
-//       createFromMockImplementation((state) => {
-//         if (state.table === "issues" && state.operation === "select") {
-//           return { data: { status: "open", title: "Test issue" }, error: null };
-//         }
-
-//         if (state.table === "profiles" && state.operation === "select") {
-//           return { data: { display_name: "Tester" }, error: null };
-//         }
-
-//         if (state.table === "issues" && state.operation === "update") {
-//           return {
-//             data: {
-//               id: "issue-1",
-//               title: "Test issue",
-//               status: "resolved",
-//               resolved_by: "user-1",
-//               resolved_at: "2026-04-01T00:00:00.000Z",
-//             },
-//             error: null,
-//           };
-//         }
-
-//         return { data: null, error: null };
-//       }),
-//     );
-
-//     const { createApp } = await import("./app");
-//     const app = createApp();
-
-//     const res = await request(app, "/issues/issue-1/resolve", {
-//       method: "PATCH",
-//       headers: {
-//         "x-test-role": "member",
-//       },
-//     });
-
-//     expect(res.status).toBe(200);
-//     const body = await res.json();
-//     expect(body.issue.status).toBe("resolved");
-//     expect(createAuditLogMock).toHaveBeenCalledWith(
-//       expect.objectContaining({
-//         action: "issue.resolve",
-//       }),
-//     );
-//   });
-
-//   it("toggles issue status from resolved to open", async () => {
-//     fromMock.mockImplementation(
-//       createFromMockImplementation((state) => {
-//         if (state.table === "issues" && state.operation === "select") {
-//           return { data: { status: "resolved", title: "Test issue" }, error: null };
-//         }
-
-//         if (state.table === "profiles" && state.operation === "select") {
-//           return { data: { display_name: "Tester" }, error: null };
-//         }
-
-//         if (state.table === "issues" && state.operation === "update") {
-//           return {
-//             data: {
-//               id: "issue-1",
-//               title: "Test issue",
-//               status: "open",
-//               resolved_by: null,
-//               resolved_at: null,
-//             },
-//             error: null,
-//           };
-//         }
-
-//         return { data: null, error: null };
-//       }),
-//     );
-
-//     const { createApp } = await import("./app");
-//     const app = createApp();
-
-//     const res = await request(app, "/issues/issue-1/resolve", {
-//       method: "PATCH",
-//       headers: {
-//         "x-test-role": "member",
-//       },
-//     });
-
-//     expect(res.status).toBe(200);
-//     const body = await res.json();
-//     expect(body.issue.status).toBe("open");
-//     expect(createAuditLogMock).toHaveBeenCalledWith(
-//       expect.objectContaining({
-//         action: "issue.reopen",
-//       }),
-//     );
-//   });
-// });
