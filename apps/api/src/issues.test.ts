@@ -466,7 +466,18 @@ const buildExistingCheckFailedMock = () => ({
   })
 })
 
-
+const buildReminderIssuesEmptyMock = () => ({
+  select: () => ({
+    eq: () => ({
+      not: () => ({
+        not: async () => ({
+          data: [],
+          error: null,
+        })
+      })
+    })
+  })
+});
 
 describe("app", () => {
   it("GET /health で ok: true を返す", async () => {
@@ -1628,5 +1639,51 @@ describe("app", () => {
     });
 
     expect(responsesCreateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("認証なしで /reminders/run にアクセスすると 401 を返す", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/internal/reminders/run");
+
+    expect(res.status).toBe(401);
+
+    const body = await res.json() as { error: string };
+
+    expect(body).toEqual({
+      error: "Unauthorized"
+    });
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it("reminder対象の issue がないと 200 であり,空の配列を返す", async () => {
+    mockTables({
+      issues: buildReminderIssuesEmptyMock(),
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/internal/reminders/run", {
+      method: "GET",
+      headers: {
+        "x-internal-secret": "test-internal-secret",
+      }
+    });
+
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { message: string, targets: unknown[] };
+
+    expect(body).toEqual({
+      message: "No reminder targets",
+      targets: [],
+    })
+
+    expect(sendMailMock).not.toHaveBeenCalled();
+    expect(getUserByIdMock).not.toHaveBeenCalled();
   })
 })
