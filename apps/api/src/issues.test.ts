@@ -1534,30 +1534,99 @@ describe("app", () => {
     responsesCreateMock.mockResolvedValue({
       output_text: "整形された文章",
     });
-  
+
     const { createApp } = await import("./app");
     const app = createApp();
-  
+
     const res = await request(app, "/ai/format-text", {
       method: "POST",
       body: JSON.stringify({ text: "テスト文章" }),
     });
-  
+
     expect(res.status).toBe(200);
-  
-    const body = await res.json() as { ok: boolean; text: string };
-  
+
+    const body = await res.json() as { ok: boolean, text: string };
+
     expect(body).toEqual({
       ok: true,
-      text: "整形された文章",
-    });
-  
+      text: "整形された文章"
+    })
+
     expect(responsesCreateMock).toHaveBeenCalledTimes(1);
     expect(responsesCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        //objectContainingは最低限指定した内容が入っていれば良いという意味
         model: "gpt-4.1-mini",
-        input: expect.stringContaining("テスト文章"),
-      }),
-    );
+        input: expect.stringContaining("テスト文章")
+        //stringContainingも一緒で全文一致ではなく、指定した文章が入っていればOKという意味
+      })
+    )
+  })
+
+  it("text が空の場合には 400 を返す", async () => {
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/ai/format-text", {
+      method: "POST",
+      body: JSON.stringify({ text: "" })
+    })
+
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { ok: boolean, message: string };
+
+    expect(body).toEqual({
+      ok: false,
+      message: "text is required",
+    })
+
+    expect(responsesCreateMock).not.toHaveBeenCalled();
+  })
+
+  it("OPENAI 呼び出しに失敗すると 500 を返す", async () => {
+    responsesCreateMock.mockRejectedValue(new Error("OPENAI failed"));
+    // mockResolvedValue は成功したPromiseを返す場合に使用する
+    // mockRejectedValue は失敗したPromiseを返す場合に使用する
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/ai/format-text", {
+      method: "POST",
+      body: JSON.stringify({ text: "テスト文章" }),
+    })
+
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { ok: boolean, message: string };
+
+    expect(body).toEqual({
+      ok: false,
+      message: "AI formatting failed",
+    });
   });
+
+  it("GET ai/test は応援メッセージを返す", async () => {
+    responsesCreateMock.mockResolvedValue({
+      output_text: "応援メッセージ",
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/ai/test", {
+      method: "GET",
+    })
+
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { ok: boolean, text: string };
+
+    expect(body).toEqual({
+      ok: true,
+      text: "応援メッセージ",
+    });
+
+    expect(responsesCreateMock).toHaveBeenCalledTimes(1);
+  })
 })
