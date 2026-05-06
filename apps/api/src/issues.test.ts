@@ -479,6 +479,19 @@ const buildReminderIssuesEmptyMock = () => ({
   })
 });
 
+const buildReminderIssuesFailedMock = () => ({
+  select: () => ({
+    eq: () => ({
+      not: () => ({
+        not: async () => ({
+          data: null,
+          error: "DB reminder fetch filed",
+        })
+      })
+    })
+  })
+})
+
 describe("app", () => {
   it("GET /health で ok: true を返す", async () => {
     const { createApp } = await import("./app");
@@ -1686,4 +1699,207 @@ describe("app", () => {
     expect(sendMailMock).not.toHaveBeenCalled();
     expect(getUserByIdMock).not.toHaveBeenCalled();
   })
+
+  it("reminder対象の issue の取得に失敗すると 500 を返す", async () => {
+    mockTables({
+      issues: buildReminderIssuesFailedMock(),
+    });
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/internal/reminders/run", {
+      method: "GET",
+      headers: {
+        "x-internal-secret": "test-internal-secret"
+      }
+    })
+
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { error: string };
+
+    expect(body).toEqual({
+      error: "Failed to fetch reminder targets",
+    })
+
+    expect(sendMailMock).not.toHaveBeenCalled();
+    expect(getUserByIdMock).not.toHaveBeenCalled();
+  });
+
+  it("期日３日前の reminder があるとメールを送信して sentCount を返す", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime("2026-04-07T00:00:00+09:00");
+
+    const updateEqMock = getUserByIdMock.mockResolvedValue({ error: null })
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              not: () => ({
+                not: async () => ({
+                  data: [
+                    {
+                      id: "issue-1",
+                      title: "Test Issue",
+                      status: "open",
+                      due_date: "2026-04-10",
+                      assigned_to: "user-1",
+                      reminder_3days_sent_at: null,
+                      reminder_due_sent_at: null,
+                      assigned_to_profile: {
+                        id: "user-1",
+                        display_name: "担当者A",
+                      }
+                    }
+                  ],
+                  error: null
+                })
+              })
+            })
+          }),
+          update: () => ({
+            eq: updateEqMock,
+          })
+        }
+      }
+      return {}
+    })
+
+    getUserByIdMock.mockResolvedValue({
+      data: {
+        user: {
+          email: "test@example.com"
+        }
+      }
+    })
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/internal/reminders/run", {
+      method: "GET",
+      headers: {
+        "x-internal-secret": "test-internal-secret",
+      }
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      message: string,
+      sentCount: number,
+      skippedCount: number,
+      targets: Array<{ shouldSend3Days: boolean, shouldSendDue: boolean }>
+    }
+
+    expect(body.message).toBe("Reminder check completed");
+    expect(body.sentCount).toBe(1);
+    expect(body.skippedCount).toBe(0);
+    expect(body.targets).toHaveLength(1);
+    expect(body.targets[0].shouldSend3Days).toBe(true);
+    expect(body.targets[0].shouldSendDue).toBe(false);
+
+    expect(getUserByIdMock).toHaveBeenCalledWith("user-1");
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "test@example.com",
+        subject: "[Issue Board] 期限3日前: Test Issue"
+      })
+    )
+
+    expect(updateEqMock).toHaveBeenCalledWith("id", "issue-1")
+
+    vi.useRealTimers();
+  })
+
+  it("メール送信に失敗すると skippedCount が増え update は走らない", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-07T00:00+09:00"));
+
+    sendMailMock.mockRejectedValueOnce(new Error("mail failed"));
+
+    const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === "issues") {
+        return {
+          select: () => ({
+            eq: () => ({
+              not: () => ({
+                not: async () => ({
+                  data: [
+                    {
+                      id: "issue-1",
+                      title: "Test Issue",
+                      status: "open",
+                      due_date: "2026-04-10",
+                      assigned_to: "user-1",
+                      reminder_3days_sent_at: null,
+                      reminder_due_sent_at: null,
+                      assigned_to_profile:
+                        [
+                          {
+                            id: "user-1",
+                            display_name: "担当者A",
+                          }
+                        ]
+                    }
+                  ],
+                  error: null
+                })
+              })
+            })
+          }),
+          update: () => ({
+            eq: updateEqMock,
+          })
+        }
+      }
+      return {}
+    })
+
+    getUserByIdMock.mockResolvedValue({
+      data: {
+        user: {
+          email: "test@example.com"
+        }
+      }
+    })
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => { });
+
+    const { createApp } = await import("./app");
+    const app = createApp();
+
+    const res = await request(app, "/internal/reminders/run", {
+      method: "GET",
+      headers: {
+        "x-internal-secret": "test-internal-secret",
+      }
+    });
+
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      message: string,
+      sentCount: number,
+      skippedCount: number,
+      targets: Array<{ shouldSend3Days: boolean, shouldSendDue: boolean }>
+    }
+
+    expect(body.message).toBe("Reminder check completed");
+    expect(body.sentCount).toBe(0);
+    expect(body.skippedCount).toBe(1);
+    expect(body.targets).toHaveLength(1);
+
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+    expect(updateEqMock).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
 })
